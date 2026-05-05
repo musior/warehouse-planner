@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planowanie Zasobów — Magazyn</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <div id="error-toast" class="error-toast hidden"></div>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">&#9664;&#9654;</div>
+      <div class="topbar-title-group">
+        <span class="topbar-title">Planowanie Zasobów</span>
+        <span class="topbar-sub">Magazyn inbound</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="data-summary" class="data-summary"></span>
+      <button class="btn btn-primary" id="btn-upload-trigger">&#8679;&nbsp;Wczytaj pliki</button>
+    </div>
+  </header>
+
+  <!-- UPLOAD OVERLAY -->
+  <div id="upload-overlay" class="upload-overlay hidden">
+    <div class="upload-panel">
+      <div class="upload-panel-header">
+        <span class="upload-panel-title">Wczytaj pliki wsadowe</span>
+        <button class="btn-icon" id="btn-upload-close">&times;</button>
+      </div>
+      <p class="upload-panel-hint">
+        Przeciągnij pliki na sloty lub kliknij aby wybrać. Dane są przetwarzane lokalnie w przeglądarce.
+      </p>
+      <div class="upload-slots">
+        <div class="upload-slot" id="slot-awizacje">
+          <input type="file" accept=".xlsx,.xls" class="slot-input" />
+          <div class="slot-icon">&#128196;</div>
+          <div class="slot-label">Awizacje</div>
+          <div class="slot-format">.xlsx</div>
+          <div class="slot-filename"></div>
+          <div class="slot-status-icon"></div>
+        </div>
+        <div class="upload-slot" id="slot-sscc-inbound">
+          <input type="file" accept=".csv" class="slot-input" />
+          <div class="slot-icon">&#128666;</div>
+          <div class="slot-label">SSCC Inbound</div>
+          <div class="slot-format">Jadące · .csv</div>
+          <div class="slot-filename"></div>
+          <div class="slot-status-icon"></div>
+        </div>
+        <div class="upload-slot" id="slot-sscc-arrived">
+          <input type="file" accept=".csv" class="slot-input" />
+          <div class="slot-icon">&#128230;</div>
+          <div class="slot-label">SSCC Outbound</div>
+          <div class="slot-format">Przybyłe · .csv</div>
+          <div class="slot-filename"></div>
+          <div class="slot-status-icon"></div>
+        </div>
+      </div>
+      <div class="file-status-row">
+        <div class="file-status-item">
+          <span class="file-status-icon" id="file-status-awizacje">○</span> Awizacje
+        </div>
+        <div class="file-status-item">
+          <span class="file-status-icon" id="file-status-sscc-inbound">○</span> SSCC Inbound
+        </div>
+        <div class="file-status-item">
+          <span class="file-status-icon" id="file-status-sscc-arrived">○</span> SSCC Outbound
+        </div>
+      </div>
+      <div class="upload-panel-footer">
+        <button class="btn btn-primary" id="btn-upload-close-bottom">Gotowe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main-layout">
+
+    <!-- PASEK DATY I FILTRÓW -->
+    <div class="date-bar">
+      <div class="date-bar-left">
+        <button class="btn-date-nav" id="btn-date-prev" title="Poprzedni dzień">&#8592;</button>
+        <div class="date-range-controls">
+          <label class="date-label">Od:</label>
+          <input type="date" id="filter-date-from" class="date-input" />
+          <label class="date-label">Do:</label>
+          <input type="date" id="filter-date-to" class="date-input" />
+        </div>
+        <button class="btn-date-nav" id="btn-date-next" title="Następny dzień">&#8594;</button>
+        <div class="date-presets">
+          <button class="btn-preset active" data-preset="tomorrow">Jutro</button>
+          <button class="btn-preset" data-preset="today">Dziś</button>
+          <button class="btn-preset" data-preset="3days">3 dni</button>
+          <button class="btn-preset" data-preset="week">Tydzień</button>
+        </div>
+      </div>
+      <div class="date-bar-right">
+        <span id="date-bar-summary" class="date-bar-summary"></span>
+      </div>
+    </div>
+
+    <nav class="tabs-nav">
+      <button class="tab active" data-tab="overview">Przegląd</button>
+      <button class="tab" data-tab="awizacje">Awizacje</button>
+      <button class="tab" data-tab="sscc">Raport SSCC</button>
+      <button class="tab" data-tab="processes">Procesy</button>
+      <button class="tab" data-tab="staffing">Planowanie ludzi</button>
+    </nav>
+
+    <!-- PRZEGLĄD -->
+    <div class="tab-panel" data-panel="overview">
+      <div id="kpi-row" class="kpi-row"></div>
+      <div class="overview-grid">
+        <div class="overview-left">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title" id="truck-list-title">Transporty</span>
+              <input type="text" id="truck-search" class="search-input" placeholder="Nr rej., SIS, SOS…" />
+            </div>
+            <div class="truck-list-filters">
+              <button class="btn-filter active" data-filter="all">Wszystkie</button>
+              <button class="btn-filter" data-filter="inbound">W drodze</button>
+              <button class="btn-filter" data-filter="arrived">Przybyłe</button>
+              <button class="btn-filter" data-filter="no-sscc">Brak SSCC</button>
+            </div>
+            <div id="truck-list" class="truck-list"></div>
+          </div>
+        </div>
+        <div class="overview-right">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Szczegóły transportu</span>
+            </div>
+            <div id="detail-panel" class="detail-panel"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AWIZACJE -->
+    <div class="tab-panel hidden" data-panel="awizacje">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Awizacje</span>
+          <div class="panel-controls">
+            <input type="text" id="awizacje-search" class="search-input" placeholder="Szukaj…" />
+          </div>
+        </div>
+        <div id="awizacje-table-wrap" class="table-wrap">
+          <div class="empty-state"><div class="empty-icon">&#128196;</div><div class="empty-text">Wczytaj plik Awizacje</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SSCC -->
+    <div class="tab-panel hidden" data-panel="sscc">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Raport SSCC Inbound</span>
+          <div class="panel-controls">
+            <input type="text" id="sscc-search" class="search-input" placeholder="SIS, rejestracja…" />
+          </div>
+        </div>
+        <div id="sscc-table-wrap" class="table-wrap">
+          <div class="empty-state"><div class="empty-icon">&#128666;</div><div class="empty-text">Wczytaj plik SSCC Inbound</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROCESY -->
+    <div class="tab-panel hidden" data-panel="processes">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Procesy — zapotrzebowanie na ludzi</span>
+        </div>
+        <div id="processes-content">
+          <div class="empty-state">
+            <div class="empty-icon">&#9881;</div>
+            <div class="empty-text">Wczytaj pliki aby zobaczyć obliczenia</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLANOWANIE LUDZI -->
+    <div class="tab-panel hidden" data-panel="staffing">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Planowanie ludzi</span></div>
+        <div class="empty-state">
+          <div class="empty-icon">&#128101;</div>
+          <div class="empty-text">Sekcja w przygotowaniu</div>
+          <div class="empty-sub">Po zdefiniowaniu procesów pojawi się tu planowanie zmian</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
