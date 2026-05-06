@@ -78,7 +78,7 @@ function buildTruckRow(t) {
 
   return `<div class="truck-row${sel}" data-sis="${esc(t.sis)}" data-status="${esc(t.status)}">
     <div class="truck-row-main">
-      <div class="truck-plate">${esc(t.sis)}</div>
+      <div class="truck-plate">${esc(t.sisDisplay ?? t.sis)}</div>
       <div class="truck-meta">
         <span class="truck-sos">${esc(t.sos)}</span>
         ${celne}${kontener}
@@ -130,7 +130,7 @@ export function renderDetailPanel(truck) {
   const headerHtml = `
     <div class="detail-header">
       <div class="detail-title">
-        <span class="detail-plate">${esc(truck.sis)}</span>
+        <span class="detail-plate">${esc(truck.sisDisplay ?? truck.sis)}</span>
         ${statusBadge(truck.status)}
         ${truck.isCelne         ? `<span class="badge badge-celne">CELNE</span>`               : ''}
         ${truck.isKontenerManual? `<span class="badge badge-kontener-manual">KONTENER MANUAL</span>` : truck.isKontener ? `<span class="badge badge-kontener">KONTENER</span>` : ''}
@@ -273,7 +273,7 @@ export function renderDetailPanel(truck) {
     <div class="detail-section">
       <div class="empty-state small">
         <div class="empty-text">Brak danych SSCC dla tego transportu</div>
-        <div class="empty-sub">SIS ${esc(truck.sis)} nie występuje w raporcie SSCC Inbound</div>
+        <div class="empty-sub">SIS ${esc(truck.sisDisplay ?? truck.sis)} nie występuje w raporcie SSCC Inbound</div>
       </div>
     </div>`}
   `;
@@ -467,7 +467,7 @@ function sosCls(sos) {
 // ZAKŁADKA: PROCESY
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function renderProcessesTab(staffing) {
+export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null) {
   const wrap = document.getElementById('processes-content');
   if (!wrap) return;
 
@@ -478,8 +478,13 @@ export function renderProcessesTab(staffing) {
     staffing.crossBoxes       > 0
   );
 
-  if (!hasData) {
+  if (!staffing && trucks.length === 0) {
     wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9881;</div><div class="empty-text">Brak danych do obliczenia</div><div class="empty-sub">Wczytaj pliki Awizacje i SSCC Inbound</div></div>';
+    return;
+  }
+
+  if (!staffing) {
+    wrap.innerHTML = '<div class="processes-layout">' + buildTransportSelectionTable(trucks, selectedSisSet) + '</div>';
     return;
   }
 
@@ -495,6 +500,9 @@ export function renderProcessesTab(staffing) {
 
   wrap.innerHTML =
     '<div class="processes-layout">' +
+
+    // Tabela wyboru transportów
+    buildTransportSelectionTable(trucks, selectedSisSet) +
 
     // Pasek podsumowania
     '<div class="process-summary-bar">' +
@@ -645,6 +653,59 @@ export function renderProcessesTab(staffing) {
 }
 
 
+
+function buildTransportSelectionTable(trucks, selectedSisSet) {
+  if (!trucks || trucks.length === 0) return '';
+
+  const allSelected    = selectedSisSet === null;
+  const selectedCount  = allSelected ? trucks.length : selectedSisSet.size;
+  const isSelected     = sis => allSelected || selectedSisSet.has(sis);
+
+  const allChecked     = allSelected ? 'checked' : '';
+
+  const statusLabel = s =>
+    s === 'inbound'  ? 'W drodze' :
+    s === 'arrived'  ? 'Przybyły' : 'Brak SSCC';
+  const statusClass = s =>
+    s === 'inbound'  ? 'ts-badge--inbound' :
+    s === 'arrived'  ? 'ts-badge--arrived' : 'ts-badge--no-sscc';
+
+  const rows = trucks.map(t => {
+    const checked = isSelected(t.sis) ? 'checked' : '';
+    return '<tr>' +
+      '<td class="ts-cb-cell"><input type="checkbox" class="truck-select-cb" data-sis="' + t.sis + '" ' + checked + '></td>' +
+      '<td class="ts-sis">' + t.sis + '</td>' +
+      '<td>' + (t.truckPlate || '—') + '</td>' +
+      '<td>' + (t.sos || '—') + '</td>' +
+      '<td class="ts-time">' + (t.godzTime || '—') + '</td>' +
+      '<td><span class="ts-badge ' + statusClass(t.status) + '">' + statusLabel(t.status) + '</span></td>' +
+      '<td class="ts-num">' + (t.pallets ? t.pallets.total : 0) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  return (
+    '<div class="transport-selection">' +
+      '<div class="ts-header">' +
+        '<span class="ts-title">Wybierz transporty do przeliczenia</span>' +
+        '<span class="ts-count">' + selectedCount + ' / ' + trucks.length + ' wybranych</span>' +
+      '</div>' +
+      '<div class="ts-table-wrap">' +
+        '<table class="ts-table">' +
+          '<thead><tr>' +
+            '<th class="ts-cb-cell"><input type="checkbox" class="truck-select-cb" data-all="1" ' + allChecked + '></th>' +
+            '<th>SIS</th>' +
+            '<th>Nr rej.</th>' +
+            '<th>SOS</th>' +
+            '<th>Godz.</th>' +
+            '<th>Status</th>' +
+            '<th class="ts-num">Palet</th>' +
+          '</tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>'
+  );
+}
 
 function r2(v) { return Math.round(v * 100) / 100; }
 

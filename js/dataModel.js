@@ -67,10 +67,14 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     return true;
   });
 
-  // ── 3. Zbuduj mapę: SIS -> awizacja ────────────────────────────────────────
+  // ── 3. Zbuduj mapę: klucz -> awizacja ─────────────────────────────────────
+  // Awizacje bez prawdziwego SIS (puste lub "brak") dostają unikalny klucz
+  // oparty o numer rejestracyjny, żeby nie nadpisywały się nawzajem w Map.
   const awizacjeBySis = new Map();
   for (const a of awizacjeOnDate) {
-    if (a.sis) awizacjeBySis.set(a.sis, a);
+    const hasSis = a.sis && a.sis.toLowerCase() !== 'brak';
+    const key = hasSis ? a.sis : (a.nrRejestracyjny || `_brak_${awizacjeBySis.size}`);
+    awizacjeBySis.set(key, a);
   }
 
   // ── 4. Zbierz SIS z SSCC Inbound (auta wciąż w drodze) ────────────────────
@@ -107,6 +111,7 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
 
     trucks.push({
       sis,
+      sisDisplay:      awizacja.sis || 'brak',
       awizacja,
       ssccRows,
       hasArrived,
@@ -138,36 +143,49 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
   const trucksArrived  = trucks.filter(t => t.status === 'arrived');
   const trucksNoSscc   = trucks.filter(t => t.status === 'no-sscc');
 
+  const kpi = computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccOutbound);
+
+  return {
+    planningDate,
+    trucks,
+    trucksInbound,
+    trucksArrived,
+    trucksNoSscc,
+    kpi,
+    awizacjeOnDate,
+    ssccInbound,
+    ssccArrived,
+    arrivedSisSet,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OBLICZANIE KPI Z TABLIC DANYCH (reużywane przez buildModel i buildKpiForSelection)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccOutbound) {
+  const trucksInbound   = trucks.filter(t => t.status === 'inbound');
+  const trucksArrived   = trucks.filter(t => t.status === 'arrived');
+  const trucksNoSscc    = trucks.filter(t => t.status === 'no-sscc');
+
   const totalPalletsInbound = trucksInbound.reduce((s, t) => s + t.pallets.total, 0);
   const totalPalletsAll     = trucks.reduce((s, t) => s + t.pallets.total, 0);
 
-  // ── WAŻNE: liczymy palety TYLKO z transportów pasujących do zakresu dat ───
-  // Plik SSCC zawiera auta z wielu dni — nie sumujemy całego pliku,
-  // tylko wiersze SSCC należące do awizacji z wybranego zakresu dat.
-
-  // Zwykłe kontenery (SOS = KONTENER, nie MANUAL) z Celne = W drodze → ST+ST2 → do Rozładunku
-  const kontenerRegularRows  = awizacjeOnDate.filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'W drodze');
+  const kontenerRegularRows    = awizacjeOnDate.filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'W drodze');
   const kontenerRegularPallets = kontenerRegularRows.reduce((s, a) => s + a.st + a.st2, 0);
 
-  // Kontenery manualne (SOS = KONTENER MANUAL, Celne = W drodze) → AC → osobny proces
   const kontenerManualRows    = awizacjeOnDate.filter(a => a.isKontenerManual && a.celneShipmenty === 'W drodze');
   const kontenerManualCartons = kontenerManualRows.reduce((s, a) => s + a.ac + a.ac2, 0);
 
-  // Palety do Rozładunku = SSCC inbound + zwykłe kontenery (BEZ manualnych)
   const totalPalletsFromSSCC = round(totalPalletsAll + kontenerRegularPallets);
-
-  // ── Sortowanie DG i CROSS ─────────────────────────────────────────────────
-  // Filtrujemy BX TYLKO z transportów należących do wybranego zakresu dat
-  // (SIS musi być w awizacjeOnDate) — identycznie jak logika łączenia powyżej.
-  // ISBLANK(EffectiveArrival) = wiersze SSCC gdzie transport jeszcze nie dotarł
-  // (w pliku Inbound EffectiveArrival jest zawsze puste — wszystkie są "w drodze").
 
   const activeSisSet = new Set(awizacjeOnDate.map(a => a.sis).filter(Boolean));
 
-  const DG_DEST    = 'PL Dabrowa Hub';
-  const DG_SHIPPER = '3M';
+  const DG_DEST       = 'PL Dabrowa Hub';
+  const DG_SHIPPER    = '3M';
+  const CROSS_EXCLUDE = new Set([DG_DEST, 'SOLVENTUM FIEGE DABROWA PL 3PL DC']);
+  const DG_DESTS      = new Set([DG_DEST, 'SOLVENTUM FIEGE DABROWA PL 3PL DC']);
 
-  // Sortowanie DG: BX → PL Dabrowa Hub, Shipper=3M, EffectiveArrival blank, SIS w aktywnych awizacjach
   const bxDg = ssccInbound.filter(r =>
     r.packageTypeCode === 'BX'  &&
     r.customerShipTo  === DG_DEST &&
@@ -175,12 +193,9 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     !r.effectiveArrival &&
     activeSisSet.has(r.sisKey)
   ).length;
-  // + kartony z kontenerów zwykłych z awizacji (SSCC ich nie zawiera)
   const dgKontenerCartons = kontenerRegularRows.reduce((s, a) => s + a.ac + a.ac2, 0);
   const sortingDgBoxes    = bxDg + dgKontenerCartons;
 
-  // Sortowanie CROSS: BX → nie DG ani SOLVENTUM, Shipper=3M, EffectiveArrival blank, SIS aktywny
-  const CROSS_EXCLUDE = new Set([DG_DEST, 'SOLVENTUM FIEGE DABROWA PL 3PL DC']);
   const bxCross = ssccInbound.filter(r =>
     r.packageTypeCode === 'BX'  &&
     !CROSS_EXCLUDE.has(r.customerShipTo) &&
@@ -190,9 +205,6 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
   ).length;
   const sortingCrossBoxes = bxCross;
 
-  // ── Wstawianie drobnicy + palet DG ───────────────────────────────────────
-  // Filtr BX: Customer_Ship_To IN {DG, SOLVENTUM}, Shipper=3M, EffectiveArrival blank, SIS aktywny
-  const DG_DESTS = new Set([DG_DEST, 'SOLVENTUM FIEGE DABROWA PL 3PL DC']);
   const bxDgRows = ssccInbound.filter(r =>
     r.packageTypeCode === 'BX'  &&
     DG_DESTS.has(r.customerShipTo) &&
@@ -201,8 +213,7 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     activeSisSet.has(r.sisKey)
   );
 
-  // Grupuj BX po ATII: zlicz wiersze i sumuj Volume
-  const atiiMap = new Map(); // ATII -> { count, volume }
+  const atiiMap = new Map();
   for (const r of bxDgRows) {
     const atii = r.additionalTradeItemIdentification;
     if (!atii) continue;
@@ -212,25 +223,16 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     entry.volume += r.volume || 0;
   }
 
-  // Klasyfikacja ATII (trzy rozlaczne kategorie pokrywajace wszystkie ATII):
-  //   drobnica:    count<20 AND vol<0.1   -> Wstawianie drobnicy DG
-  //   over01vol:   count<20 AND vol>=0.1  -> Palety_z_20K (Stock_over_01vol)
-  //   over20:      count>=20              -> Palety_z_20K (Stock_over_20)
   let drobnicalItems = 0;
   let over01volItems = 0;
   let over20Items    = 0;
 
   for (const [, entry] of atiiMap) {
-    if (entry.count >= 20) {
-      over20Items++;
-    } else if (entry.volume < 0.1) {
-      drobnicalItems++;
-    } else {
-      over01volItems++;
-    }
+    if (entry.count >= 20)       over20Items++;
+    else if (entry.volume < 0.1) drobnicalItems++;
+    else                         over01volItems++;
   }
 
-  // Pelne_palety_DG = PE (nie-BX) dla DG+SOLVENTUM, Shipper=3M, eff_blank, SIS aktywny
   const pelnePaletyDg = ssccInbound.filter(r =>
     r.packageTypeCode !== 'BX' &&
     DG_DESTS.has(r.customerShipTo) &&
@@ -239,10 +241,8 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     activeSisSet.has(r.sisKey)
   ).length;
 
-  // Palety_z_20K = over_01vol + over_20
   const paletyZ20K = over01volItems + over20Items;
 
-  // ── Sortowanie rampa DG (z SSCC Inbound, EffectiveArrival WYPEŁNIONY) ────────
   const bxDgRampaRows = ssccInbound.filter(r =>
     r.packageTypeCode === 'BX'  &&
     r.customerShipTo  === DG_DEST &&
@@ -250,43 +250,38 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     r.effectiveArrival
   );
   const bxDgRampa = bxDgRampaRows.length;
-  // Magazyn: kontenery Rozładowany/Na placu bierzemy ze WSZYSTKICH awizacji (nie tylko z filtra daty)
+
   const kontenerRozladowanyAC = awizacje
     .filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'Rozładowany')
     .reduce((s, a) => s + a.ac + a.ac2, 0);
   const sortRampaBoxes = bxDgRampa + kontenerRozladowanyAC;
 
-  const bxDgPlac = ssccOutbound.filter(r =>
-    r.packageTypeCode === 'BX' &&
-    r.isDG &&
-    !r.taskCloseDate
-  ).length;
+  const bxDgPlacRows = ssccOutbound.filter(r =>
+    r.packageTypeCode === 'BX' && r.isDG && !r.taskCloseDate
+  );
+  const bxDgPlac = bxDgPlacRows.length;
   const kontenerNaPlacu = awizacje
     .filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'Na placu')
     .reduce((s, a) => s + a.ac + a.ac2, 0);
   const sortPlacBoxes = bxDgPlac + kontenerNaPlacu;
 
-  // ── Sortowanie CROSS — bufor (Inbound, EffectiveArrival filled, !isDG, Shipper=3M) ──
   const sortCrossRampaBoxes = ssccInbound.filter(r =>
     r.packageTypeCode === 'BX' &&
-    !r.isDG &&                     // Lane Typ = CROSS = nie DG
+    !r.isDG &&
     r.shipper === DG_SHIPPER &&
-    r.effectiveArrival             // NOT ISBLANK — auto już przybyło
+    r.effectiveArrival
   ).length;
 
-  // ── Sortowanie CROSS — plac (Outbound, !isDG, TaskCloseDate blank, FinishedScanDateTime blank, Shipper=3M) ──
   const sortCrossPlacBoxes = ssccOutbound.filter(r =>
     r.packageTypeCode === 'BX' &&
-    !r.isDG &&                     // Lane Typ = CROSS
+    !r.isDG &&
     r.shipper === DG_SHIPPER &&
-    !r.taskCloseDate &&            // ISBLANK(TaskCloseDate)
-    !r.finishedScanDateTime        // ISBLANK(FinishedScanDateTime)
+    !r.taskCloseDate &&
+    !r.finishedScanDateTime
   ).length;
 
-  // Kontener ST (zwykly, Celne=W drodze)
   const kontenerSt = kontenerRegularRows.reduce((s, a) => s + a.st + a.st2, 0);
 
-  // ── Drobnica rampa: ATII z Inbound (EffectiveArrival filled, DG, 3M), count<20, vol<0.1
   const atiiMapDrobnicaRampa = new Map();
   for (const r of bxDgRampaRows) {
     const atii = r.additionalTradeItemIdentification;
@@ -298,10 +293,6 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
   const drobnicalItemsRampa = [...atiiMapDrobnicaRampa.values()]
     .filter(e => e.count < 20 && e.volume < 0.1).length;
 
-  // ── Drobnica plac: ATII z Outbound (isDG, TaskCloseDate blank), count<20, vol<0.1
-  const bxDgPlacRows = ssccOutbound.filter(r =>
-    r.packageTypeCode === 'BX' && r.isDG && !r.taskCloseDate
-  );
   const atiiMapDrobnicaPlac = new Map();
   for (const r of bxDgPlacRows) {
     const atii = r.additionalTradeItemIdentification;
@@ -313,8 +304,6 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
   const drobnicalItemsPlac = [...atiiMapDrobnicaPlac.values()]
     .filter(e => e.count < 20 && e.volume < 0.1).length;
 
-  // ── Przygotowanie palet — rampa (Inbound, EffectiveArrival filled) ─────────
-  // bxDgRampaRows już zdefiniowane powyżej (reużywamy)
   const atiiMapRampa = new Map();
   for (const r of bxDgRampaRows) {
     const atii = r.additionalTradeItemIdentification;
@@ -340,8 +329,6 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     .filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'Rozładowany')
     .reduce((s, a) => s + a.st + a.st2, 0);
 
-  // ── Przygotowanie palet — plac (Outbound, isDG, TaskCloseDate blank) ────────
-  // bxDgPlacRows już zdefiniowane powyżej (reużywamy)
   const atiiMapPlac = new Map();
   for (const r of bxDgPlacRows) {
     const atii = r.additionalTradeItemIdentification;
@@ -367,50 +354,59 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     .reduce((s, a) => s + a.st + a.st2, 0);
 
   return {
-    planningDate,
-    trucks,
-    trucksInbound,
-    trucksArrived,
-    trucksNoSscc,
-    kpi: {
-      totalTrucks:             trucks.length,
-      inboundTrucks:           trucksInbound.length,
-      arrivedTrucks:           trucksArrived.length,
-      noSsccTrucks:            trucksNoSscc.length,
-      totalPalletsInbound:     round(totalPalletsInbound),
-      totalPalletsAll:         round(totalPalletsAll),
-      totalPalletsFromSSCC,         // palety do Rozładunku (bez kontenerów manualnych)
-      kontenerRegularPallets,       // palety z zwykłych kontenerów
-      kontenerManualCartons,        // kartony z kontenerów manualnych → osobny proces
-      sortingDgBoxes,               // kartony BX do sortowania DG (PL Dabrowa Hub + kontenery)
-      sortingCrossBoxes,            // kartony BX do sortowania CROSS (reszta)
-      drobnicalItems,
-      over01volItems,
-      over20Items,
-      paletyZ20K,
-      pelnePaletyDg,
-      kontenerSt,
-      sortRampaBoxes,
-      sortPlacBoxes,
-      sortCrossRampaBoxes,         // BX bufor CROSS (Inbound, eff filled, !isDG)
-      sortCrossPlacBoxes,          // BX plac CROSS (Outbound, !isDG, taskClose blank, finished blank)
-      drobnicalItemsRampa,
-      drobnicalItemsPlac,
-      kontenerRozladowanyAC,      // AC z kontenerów Rozładowany → Sort. rampa + Drobnica rampa
-      // Przygotowanie palet — rampa
-      paletyZ20KRampa,
-      pelnePaletyDgRampa,
-      kontenerRozladowanyST,
-      // Przygotowanie palet — plac
-      paletyZ20KPlac,
-      pelnePaletyDgPlac,
-      kontenerNaPlacu_ST,
-    },
-    awizacjeOnDate,
-    ssccInbound,
-    ssccArrived,
-    arrivedSisSet,
+    totalTrucks:             trucks.length,
+    inboundTrucks:           trucksInbound.length,
+    arrivedTrucks:           trucksArrived.length,
+    noSsccTrucks:            trucksNoSscc.length,
+    totalPalletsInbound:     round(totalPalletsInbound),
+    totalPalletsAll:         round(totalPalletsAll),
+    totalPalletsFromSSCC,
+    kontenerRegularPallets,
+    kontenerManualCartons,
+    sortingDgBoxes,
+    sortingCrossBoxes,
+    drobnicalItems,
+    over01volItems,
+    over20Items,
+    paletyZ20K,
+    pelnePaletyDg,
+    kontenerSt,
+    sortRampaBoxes,
+    sortPlacBoxes,
+    sortCrossRampaBoxes,
+    sortCrossPlacBoxes,
+    drobnicalItemsRampa,
+    drobnicalItemsPlac,
+    kontenerRozladowanyAC,
+    paletyZ20KRampa,
+    pelnePaletyDgRampa,
+    kontenerRozladowanyST,
+    paletyZ20KPlac,
+    pelnePaletyDgPlac,
+    kontenerNaPlacu_ST,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KPI DLA WYBRANYCH TRANSPORTÓW
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Przelicza KPI tylko dla wybranych transportów (po SIS).
+ * selectedSisSet = null oznacza "wszystkie".
+ */
+export function buildKpiForSelection(model, selectedSisSet, { awizacje, ssccInbound, ssccOutbound }) {
+  if (!selectedSisSet) return model.kpi;
+
+  // Filtrujemy tylko trucks i awizacjeOnDate — z nich buduje się activeSisSet,
+  // który filtruje obliczenia Inbound (Rozładunek, DG, CROSS).
+  // ssccInbound, ssccOutbound i awizacje przekazujemy w całości, dzięki czemu
+  // obliczenia Magazynu (oparte na effectiveArrival / ssccOutbound / celneShipmenty)
+  // zawsze operują na pełnych danych i nie są filtrowane przez wybór transportów.
+  const selectedTrucks        = model.trucks.filter(t => selectedSisSet.has(t.sis));
+  const filteredAwizacjeOnDate = model.awizacjeOnDate.filter(a => selectedSisSet.has(a.sis));
+
+  return computeKpiFromData(selectedTrucks, filteredAwizacjeOnDate, awizacje, ssccInbound, ssccOutbound);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

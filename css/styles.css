@@ -810,6 +810,139 @@ html, body {
   border-left: 2px solid var(--amber-bg);
 }
 
+/* ── Transport Selection Table ────────────────────────────────────────────── */
+.transport-selection {
+  background: var(--bg-card);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.ts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-hover);
+  border-bottom: 1px solid var(--border);
+}
+
+.ts-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ts-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  background: var(--blue-bg);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.ts-table-wrap {
+  overflow-x: auto;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.ts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ts-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-hover);
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border-md);
+  white-space: nowrap;
+}
+
+.ts-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.ts-table tbody tr:last-child { border-bottom: none; }
+
+.ts-table tbody tr:hover { background: var(--bg-hover); }
+
+.ts-table td {
+  padding: 6px 10px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.ts-cb-cell {
+  width: 36px;
+  text-align: center;
+}
+
+.ts-cb-cell input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--blue);
+}
+
+.ts-sis {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ts-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+.ts-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ts-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ts-badge--inbound {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.ts-badge--arrived {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.ts-badge--no-sscc {
+  background: var(--bg-active);
+  color: var(--text-3);
+}
+
 /* ── Processes Tab ────────────────────────────────────────────────────────── */
 .processes-layout {
   padding: 16px;

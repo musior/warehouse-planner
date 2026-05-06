@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\mmusiorski\\\\OneDrive - FIEGE Sp. z o.o\\\\VSC\\\\warehouse-planner\" -Recurse -Depth 2)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)"
+    ]
+  }
+}

@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { parseSSCCCsv, parseSSCCOutboundCsv, parseAwizacjeXlsx } from './parsers.js';
-import { buildModel, getLatestAwizacjeDate } from './dataModel.js';
+import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataModel.js';
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
          renderProcessesTab, updateFileStatus, updateSlotUI } from './ui.js';
 import { tomorrow, today, formatDate, isSameDay } from './utils.js';
@@ -11,14 +11,15 @@ import { calcAllProcesses }                      from './processes.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
-  awizacje:       null,
-  ssccInbound:    null,
-  ssccArrived:    null,   // stary slot - nieużywany
-  ssccOutbound:   null,   // SSCC Outbound (towary na magazynie)
-  model:          null,
-  staffing:       null,
-  filterDateFrom: null,
-  filterDateTo:   null,
+  awizacje:        null,
+  ssccInbound:     null,
+  ssccArrived:     null,   // stary slot - nieużywany
+  ssccOutbound:    null,   // SSCC Outbound (towary na magazynie)
+  model:           null,
+  staffing:        null,
+  filterDateFrom:  null,
+  filterDateTo:    null,
+  selectedSisSet:  null,   // null = wszystkie zaznaczone
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,10 +40,61 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDateBar();
   setupTruckFilters();
   setupSearchBoxes();
+  setupTruckSelection();
 
   applyDateToInputs();
   renderEmpty();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WYBÓR TRANSPORTÓW W ZAKŁADCE PROCESY
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupTruckSelection() {
+  document.addEventListener('change', e => {
+    const cb = e.target;
+    if (!cb.classList.contains('truck-select-cb')) return;
+    if (!state.model) return;
+
+    const allIndividualCbs = [...document.querySelectorAll('.truck-select-cb[data-sis]')];
+
+    if (cb.dataset.all !== undefined) {
+      const checked = cb.checked;
+      allIndividualCbs.forEach(c => { c.checked = checked; });
+      state.selectedSisSet = checked ? null : new Set();
+    } else {
+      const checkedSisSet = new Set(
+        allIndividualCbs.filter(c => c.checked).map(c => c.dataset.sis)
+      );
+      state.selectedSisSet = checkedSisSet.size === allIndividualCbs.length ? null : checkedSisSet;
+
+      const selectAllCb = document.querySelector('.truck-select-cb[data-all]');
+      if (selectAllCb) {
+        selectAllCb.checked       = state.selectedSisSet === null;
+        selectAllCb.indeterminate = state.selectedSisSet !== null && state.selectedSisSet.size > 0;
+      }
+    }
+
+    recomputeProcessesForSelection();
+  });
+}
+
+function recomputeProcessesForSelection() {
+  if (!state.model) return;
+  const kpi = buildKpiForSelection(state.model, state.selectedSisSet, {
+    awizacje:     state.awizacje    || [],
+    ssccInbound:  state.ssccInbound || [],
+    ssccOutbound: state.ssccOutbound || [],
+  });
+  const staffing = calcAllProcesses(kpi);
+  renderProcessesTab(staffing, state.model.trucks, state.selectedSisSet);
+
+  // Przywróć stan indeterminate po ponownym renderze
+  if (state.selectedSisSet !== null && state.selectedSisSet.size > 0) {
+    const selectAllCb = document.querySelector('.truck-select-cb[data-all]');
+    if (selectAllCb) selectAllCb.indeterminate = true;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUSTY STAN
@@ -396,12 +448,13 @@ function tryRebuildModel() {
     });
 
     // Oblicz zapotrzebowanie na ludzi (procesy)
+    state.selectedSisSet = null; // reset selekcji przy przebudowie modelu
     state.staffing = calcAllProcesses(state.model.kpi, state.ssccOutbound || []);
 
     renderDashboard(state.model);
     renderAwizacjeTable(state.awizacje || [], state.filterDateFrom, state.filterDateTo);
     renderSsccTable(state.ssccInbound || []);
-    renderProcessesTab(state.staffing);
+    renderProcessesTab(state.staffing, state.model.trucks, null);
     updateDataSummary();
   } catch (err) {
     console.error(err);
