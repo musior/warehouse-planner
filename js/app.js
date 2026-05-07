@@ -5,7 +5,7 @@
 import { parseSSCCCsv, parseSSCCOutboundCsv, parseAwizacjeXlsx } from './parsers.js';
 import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataModel.js';
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
-         renderProcessesTab, updateFileStatus, updateSlotUI } from './ui.js';
+         renderProcessesTab, renderTimesTab, updateFileStatus, updateSlotUI } from './ui.js';
 import { tomorrow, today, formatDate, isSameDay } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
 
@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   applyDateToInputs();
   renderEmpty();
+  renderTimesTab();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

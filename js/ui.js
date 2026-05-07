@@ -4,6 +4,7 @@
 
 import { formatDate, round, isSameDay } from './utils.js';
 import { buildSsccDetailTable }         from './dataModel.js';
+import { PROCESSES }                    from './processes.js';
 
 // ── Stan UI ───────────────────────────────────────────────────────────────────
 let _selectedSis   = null;
@@ -759,4 +760,78 @@ function buildProcessCardPlaceholder(label) {
       '<div class="process-people-exact" style="color:var(--text-3)">w przygotowaniu</div>' +
     '</div>'
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ZAKŁADKA: CZASY
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function renderTimesTab() {
+  const wrap = document.getElementById('times-content');
+  if (!wrap) return;
+
+  const units = {
+    unloading:          'min/paletę',
+    manualContainer:    'min/karton',
+    sortingDg:          'min/karton',
+    sortingCross:       'min/karton',
+    recoCross:          'min/paletę',
+    foliaCross:         'min/paletę',
+    drobnical:          'min/poz. ATII',
+    wstawianiePaletDg:  'min/paletę',
+    przygotowanie20K:   'min/paletę',
+    przygotowanieFP:    'min/paletę',
+    sortingRampa:       'min/karton',
+    sortingPlac:        'min/karton',
+    sortingCrossRampa:  'min/karton',
+    sortingCrossPlac:   'min/karton',
+    recoCrossRampa:     'min/paletę',
+    recoCrossPlac:      'min/paletę',
+    foliaCrossRampa:    'min/paletę',
+    foliaCrossPlac:     'min/paletę',
+    przygowanieRampa20K:'min/paletę',
+    przygowanieRampaFP: 'min/paletę',
+    przygowaniePlac20K: 'min/paletę',
+    przygowaniePlacFP:  'min/paletę',
+  };
+
+  const groups = [
+    {
+      title: 'Inbound',
+      keys: ['unloading', 'manualContainer', 'sortingDg', 'sortingCross', 'recoCross', 'foliaCross',
+             'drobnical', 'wstawianiePaletDg', 'przygotowanie20K', 'przygotowanieFP'],
+    },
+    {
+      title: 'Magazyn (towary na stanie)',
+      keys: ['sortingRampa', 'sortingPlac', 'sortingCrossRampa', 'sortingCrossPlac',
+             'recoCrossRampa', 'recoCrossPlac', 'foliaCrossRampa', 'foliaCrossPlac',
+             'przygowanieRampa20K', 'przygowanieRampaFP', 'przygowaniePlac20K', 'przygowaniePlacFP'],
+    },
+  ];
+
+  let rows = '';
+  for (const group of groups) {
+    rows += '<tr class="times-group-header"><td colspan="3">' + esc(group.title) + '</td></tr>';
+    for (const key of group.keys) {
+      const p = PROCESSES[key];
+      if (!p) continue;
+      rows += '<tr>' +
+        '<td>' + esc(p.label || p.id) + '</td>' +
+        '<td class="num">' + p.minutesPerUnit + '</td>' +
+        '<td class="times-unit">' + esc(units[key] || '—') + '</td>' +
+      '</tr>';
+    }
+  }
+
+  wrap.innerHTML =
+    '<div class="table-wrap">' +
+      '<table class="data-table times-table">' +
+        '<thead><tr>' +
+          '<th>Proces</th>' +
+          '<th class="num">Czas [min/jedn.]</th>' +
+          '<th>Jednostka</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+    '</div>';
 }

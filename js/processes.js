@@ -2,6 +2,10 @@
 // processes.js — obliczenia zapotrzebowania na ludzi per proces
 // ─────────────────────────────────────────────────────────────────────────────
 
+// TODO: Docelowo wartości minutesPerUnit będą pobierane z serwera (GET /api/process-times)
+// i zapisywane po edycji użytkownika (PUT /api/process-times/:id). Zakładka "Czasy" służy
+// do ich podglądu i przyszłej edycji. Na razie wszystkie czasy są zakodowane na stałe poniżej.
+
 export const SHIFT_MINUTES = 480; // 8h = 480 min
 
 // Pomocnicza funkcja zaokrąglania
@@ -134,16 +138,16 @@ export const PROCESSES = {
     // ~116.9 pal/os/zmianę | wejście: (sortCrossPlacBoxes / 10) × 0.75
   },
   przygowanieRampa20K: {
-    id: 'przygowanieRampa20K', minutesPerUnit: 1.56, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
+    id: 'przygowanieRampa20K', label: 'Przygotowanie palet 20K — rampa', minutesPerUnit: 1.56, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
   },
   przygowanieRampaFP: {
-    id: 'przygowanieRampaFP',  minutesPerUnit: 1.22, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
+    id: 'przygowanieRampaFP',  label: 'Przygotowanie palet FP — rampa',  minutesPerUnit: 1.22, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
   },
   przygowaniePlac20K: {
-    id: 'przygowaniePlac20K',  minutesPerUnit: 1.56, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
+    id: 'przygowaniePlac20K',  label: 'Przygotowanie palet 20K — plac',  minutesPerUnit: 1.56, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
   },
   przygowaniePlacFP: {
-    id: 'przygowaniePlacFP',   minutesPerUnit: 1.22, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
+    id: 'przygowaniePlacFP',   label: 'Przygotowanie palet FP — plac',   minutesPerUnit: 1.22, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
   },
 };
 

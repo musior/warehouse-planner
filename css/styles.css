@@ -319,6 +319,8 @@ html, body {
   overflow: hidden;
 }
 
+.panel--fit { width: fit-content; }
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -1163,3 +1165,19 @@ html, body {
   border-color: var(--blue);
   color: var(--blue);
 }
+
+/* ── Zakładka: Czasy ───────────────────────────────────────────────────────── */
+.times-table { min-width: 0; max-width: 680px; }
+.times-table tr.times-group-header td {
+  background: var(--bg);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 10px 5px;
+  border-bottom: 1.5px solid var(--border-md);
+  pointer-events: none;
+}
+.times-table tr.times-group-header:first-child td { padding-top: 6px; }
+.times-table td.times-unit { color: var(--text-3); font-size: 11px; }
