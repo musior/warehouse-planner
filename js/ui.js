@@ -618,7 +618,8 @@ export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null)
       }) +
       buildProcessCard({ id: 'sortingPlac', icon: '&#128202;', label: sortingPlac.label, result: sortingPlac, color: 'indigo',
         extraRows: [{ label: 'BX Outbound (isDG, TaskClose blank) + kont. Na placu', value: staffing.sortPlacBoxes }],
-        tooltip: ttSimple('Kartony', 'BX Outbound (isDG, TaskClose blank) + kont. Na placu', '0,3467', 1177)
+        tooltip: ttSimple('Kartony', 'BX Outbound (isDG, TaskClose blank) + kont. Na placu', '0,3467', 1177),
+        tooltipFlip: true
       }) +
       buildProcessCard({ id: 'przygowaniePlac', icon: '&#128218;', label: przygowaniePlac.label, result: przygowaniePlac, color: 'indigo',
         extraRows: [
@@ -668,11 +669,13 @@ export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null)
       }) +
       buildProcessCard({ id: 'foliaCrossRampa', icon: '&#127973;', label: foliaCrossRampa.label, result: foliaCrossRampa, color: 'teal',
         extraRows: [{ label: 'Pal. reko × 0.75', value: foliaCrossRampa.palletsReko + ' × 0.75 = ' + foliaCrossRampa.palletsFolia }],
-        tooltip: ttSimple('Palety', '(BX bufor &divide; 10) &times; 0,75 = palety do folii', '3,49', 117)
+        tooltip: ttSimple('Palety', '(BX bufor &divide; 10) &times; 0,75 = palety do folii', '3,49', 117),
+        tooltipFlip: true
       }) +
       buildProcessCard({ id: 'foliaCrossPlac', icon: '&#127973;', label: foliaCrossPlac.label, result: foliaCrossPlac, color: 'purple',
         extraRows: [{ label: 'Pal. reko × 0.75', value: foliaCrossPlac.palletsReko + ' × 0.75 = ' + foliaCrossPlac.palletsFolia }],
-        tooltip: ttSimple('Palety', '(BX plac &divide; 10) &times; 0,75 = palety do folii', '3,49', 117)
+        tooltip: ttSimple('Palety', '(BX plac &divide; 10) &times; 0,75 = palety do folii', '3,49', 117),
+        tooltipUp: true
       }) +
     '</div>' +
 
@@ -797,7 +800,7 @@ function ttTwoCompDiff(src20K, srcFP, mpu20K, bench20K, mpuFP, benchFP) {
   ]);
 }
 
-function buildProcessCard({ id, icon, label, result, color, extraRows = [], tooltip = null }) {
+function buildProcessCard({ id, icon, label, result, color, extraRows = [], tooltip = null, tooltipFlip = false, tooltipUp = false }) {
   const utilizationColor = result.utilizationPct >= 90 ? 'ok' : result.utilizationPct >= 70 ? 'warn' : 'low';
   const unitCapLabel     = result.unitLabel === 'kartonów' ? 'Kartony' : 'Palety';
   const extraHtml        = extraRows.map(row =>
@@ -807,7 +810,7 @@ function buildProcessCard({ id, icon, label, result, color, extraRows = [], tool
     '</div>'
   ).join('');
   const tooltipHtml = tooltip
-    ? '<div class="card-tooltip-wrap">' +
+    ? '<div class="card-tooltip-wrap' + (tooltipFlip ? ' card-tooltip-wrap--flip' : '') + (tooltipUp ? ' card-tooltip-wrap--up' : '') + '">' +
         '<span class="card-tooltip-btn">?</span>' +
         '<div class="card-tooltip-content">' + tooltip + '</div>' +
       '</div>'
