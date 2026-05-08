@@ -522,9 +522,13 @@ export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null)
       '<span class="process-section-total">' + (unloading.peopleCeil + manualContainer.peopleCeil) + ' os.</span>' +
     '</div>' +
     '<div class="process-cards">' +
-      buildProcessCard({ id: 'unloading',       icon: '&#128666;', label: unloading.label,       result: unloading,       color: 'blue'  }) +
+      buildProcessCard({ id: 'unloading', icon: '&#128666;', label: unloading.label, result: unloading, color: 'blue',
+        tooltip: ttSimple('Palety', 'Suma palet ze wybranych transportów (BX, Awizacja)', '1,4838', 275)
+      }) +
       (manualContainer.unitCount > 0
-        ? buildProcessCard({ id: 'manualContainer', icon: '&#128230;', label: manualContainer.label, result: manualContainer, color: 'amber' })
+        ? buildProcessCard({ id: 'manualContainer', icon: '&#128230;', label: manualContainer.label, result: manualContainer, color: 'amber',
+            tooltip: ttSimple('Kartony', 'Kont. Manual (SOS=KONTENER MANUAL, Celne=W drodze)', '0,3885', 1050)
+          })
         : buildProcessCardPlaceholder('Kont. Manual (brak)')) +
     '</div>' +
 
@@ -534,23 +538,28 @@ export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null)
       '<span class="process-section-total">' + (sortingDg.peopleCeil + drobnical.peopleCeil + wstawianiePalet.peopleCeil) + ' os.</span>' +
     '</div>' +
     '<div class="process-cards">' +
-      buildProcessCard({ id: 'sortingDg',        icon: '&#127968;', label: sortingDg.label,       result: sortingDg,       color: 'green' }) +
-      buildProcessCard({ id: 'drobnical',        icon: '&#128269;', label: drobnical.label,        result: drobnical,       color: 'green',
-        extraRows: [{ label: 'ATII drobnica (count<20, vol<0.1)', value: staffing.dgDrobnicalItems }]
+      buildProcessCard({ id: 'sortingDg', icon: '&#127968;', label: sortingDg.label, result: sortingDg, color: 'green',
+        tooltip: ttSimple('Kartony', 'BX: Customer=PL Dabrowa Hub, Shipper=3M + kont. Celne=W drodze', '0,3467', 1177)
       }) +
-      buildProcessCard({ id: 'wstawianiePalet',  icon: '&#128230;', label: wstawianiePalet.label,  result: wstawianiePalet, color: 'teal',
+      buildProcessCard({ id: 'drobnical', icon: '&#128269;', label: drobnical.label, result: drobnical, color: 'green',
+        extraRows: [{ label: 'ATII drobnica (count<20, vol<0.1)', value: staffing.dgDrobnicalItems }],
+        tooltip: ttSimple('Poz. ATII', 'Unikalne ATII (count&lt;20 i vol&lt;0.1); Customer=DG/SOLVENTUM, Shipper=3M', '0,44', 927)
+      }) +
+      buildProcessCard({ id: 'wstawianiePalet', icon: '&#128230;', label: wstawianiePalet.label, result: wstawianiePalet, color: 'teal',
         extraRows: [
           { label: 'Palety_z_20K (over01vol+over20)', value: staffing.dgPaletyZ20K },
           { label: 'Pelne palety DG (PE)', value: staffing.dgPelnePalety },
           { label: 'Kontener ST', value: staffing.dgKontenerSt },
           { label: 'FTE_20K + FTE_FP', value: wstawianiePalet.fte20K + ' + ' + wstawianiePalet.fteFP },
-        ]
+        ],
+        tooltip: ttTwoComp('Palety_z_20K (over01vol+over20)', 'Pełne palety DG (PE) + Kontener ST', '2,9073', 140)
       }) +
       buildProcessCard({ id: 'przygotowaniePalet', icon: '&#128218;', label: przygotowaniePalet.label, result: przygotowaniePalet, color: 'indigo',
         extraRows: [
           { label: 'Palety_z_20K / ' + przygotowaniePalet.bench20K, value: 'FTE_20K = ' + przygotowaniePalet.fte20K },
           { label: '(PE+ST) / ' + przygotowaniePalet.benchFP, value: 'FTE_FP = ' + przygotowaniePalet.fteFP },
-        ]
+        ],
+        tooltip: ttTwoCompDiff('Palety_z_20K', 'Pełne palety DG (PE) + Kontener ST', '1,56', 261, '1,22', 334)
       }) +
     '</div>' +
 
@@ -561,12 +570,16 @@ export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null)
     '</div>' +
     (staffing.crossBoxes > 0 ? crossFlowNote : '') +
     '<div class="process-cards">' +
-      buildProcessCard({ id: 'sortingCross', icon: '&#8635;',   label: sortingCross.label, result: sortingCross, color: 'purple' }) +
-      buildProcessCard({ id: 'recoCross',    icon: '&#128260;', label: recoCross.label,    result: recoCross,    color: 'teal',
-        extraRows: [{ label: 'Kartony ÷ 10', value: staffing.crossBoxes + ' ÷ 10 = ' + staffing.crossPalletsReko }]
+      buildProcessCard({ id: 'sortingCross', icon: '&#8635;', label: sortingCross.label, result: sortingCross, color: 'purple',
+        tooltip: ttSimple('Kartony', 'BX: Customer&ne;DG/SOLVENTUM, Shipper=3M, EffArrival puste', '0,3724', 1096)
       }) +
-      buildProcessCard({ id: 'foliaCross',   icon: '&#127973;', label: foliaCross.label,   result: foliaCross,   color: 'indigo',
-        extraRows: [{ label: 'Pal. reko × 0.75', value: staffing.crossPalletsReko + ' × 0.75 = ' + staffing.crossPalletsFolia }]
+      buildProcessCard({ id: 'recoCross', icon: '&#128260;', label: recoCross.label, result: recoCross, color: 'teal',
+        extraRows: [{ label: 'Kartony ÷ 10', value: staffing.crossBoxes + ' ÷ 10 = ' + staffing.crossPalletsReko }],
+        tooltip: ttSimple('Palety', 'Kartony CROSS &divide; 10 = palety po rekonstrukcji', '0,342', 1193)
+      }) +
+      buildProcessCard({ id: 'foliaCross', icon: '&#127973;', label: foliaCross.label, result: foliaCross, color: 'indigo',
+        extraRows: [{ label: 'Pal. reko × 0.75', value: staffing.crossPalletsReko + ' × 0.75 = ' + staffing.crossPalletsFolia }],
+        tooltip: ttSimple('Palety', '(Kartony CROSS &divide; 10) &times; 0,75 = palety do folii', '3,49', 117)
       }) +
     '</div>' +
 
@@ -577,49 +590,57 @@ export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null)
     '</div>' +
     '<div class="process-cards">' +
       buildProcessCard({ id: 'sortingRampa', icon: '&#128657;', label: sortingRampa.label, result: sortingRampa, color: 'teal',
-        extraRows: [{ label: 'BX Inbound (EffArrival filled) + kont. Rozladowany', value: staffing.sortRampaBoxes }]
+        extraRows: [{ label: 'BX Inbound (EffArrival filled) + kont. Rozladowany', value: staffing.sortRampaBoxes }],
+        tooltip: ttSimple('Kartony', 'BX Inbound (EffArrival wypełniony) + kont. Rozładowany', '0,3467', 1177)
       }) +
       buildProcessCard({ id: 'przygowanieRampa', icon: '&#128218;', label: przygowanieRampa.label, result: przygowanieRampa, color: 'teal',
         extraRows: [
           { label: 'Palety_z_20K rampa', value: (staffing.przygowanieRampa || przygowanieRampa).paletyZ20K },
           { label: 'PE rampa + kont. Rozlad. ST', value: ((staffing.przygowanieRampa || przygowanieRampa).pelnePaletyDg || 0) + ' + ' + ((staffing.przygowanieRampa || przygowanieRampa).kontenerST || 0) },
           { label: 'FTE_20K + FTE_FP', value: przygowanieRampa.fte20K + ' + ' + przygowanieRampa.fteFP },
-        ]
+        ],
+        tooltip: ttTwoCompDiff('Palety_z_20K rampa', 'PE rampa + kont. Rozładowany ST', '1,56', 261, '1,22', 334)
       }) +
       buildProcessCard({ id: 'wstawanieRampa', icon: '&#128230;', label: wstawanieRampa.label, result: wstawanieRampa, color: 'teal',
         extraRows: [
           { label: 'Palety_z_20K rampa', value: wstawanieRampa.paletyZ20K },
           { label: 'PE + kont.Rozlad.ST + manAC/54', value: (wstawanieRampa.pelnePaletyDg||0) + '+' + (wstawanieRampa.kontenerRozladowanyST||0) + '+' + (wstawanieRampa.manualPal||0) },
           { label: 'FTE_20K + FTE_FP', value: wstawanieRampa.fte20K + ' + ' + wstawanieRampa.fteFP },
-        ]
+        ],
+        tooltip: ttTwoComp('Palety_z_20K rampa', 'PE rampa + kont.ST + kont.Manual AC&divide;54', '2,9073', 140)
       }) +
       buildProcessCard({ id: 'drobnicaRampa', icon: '&#128269;', label: drobnicaRampa.label, result: drobnicaRampa, color: 'teal',
         extraRows: [
           { label: 'ATII (count<20, vol<0.1)', value: drobnicaRampa.drobnicalItems },
           { label: '+ kont. Rozladowany AC', value: drobnicaRampa.kontenerAC || 0 },
-        ]
+        ],
+        tooltip: ttSimple('Poz. ATII', 'ATII Inbound (count&lt;20, vol&lt;0.1) + kont. Rozładowany AC', '0,44', 927)
       }) +
       buildProcessCard({ id: 'sortingPlac', icon: '&#128202;', label: sortingPlac.label, result: sortingPlac, color: 'indigo',
-        extraRows: [{ label: 'BX Outbound (isDG, TaskClose blank) + kont. Na placu', value: staffing.sortPlacBoxes }]
+        extraRows: [{ label: 'BX Outbound (isDG, TaskClose blank) + kont. Na placu', value: staffing.sortPlacBoxes }],
+        tooltip: ttSimple('Kartony', 'BX Outbound (isDG, TaskClose blank) + kont. Na placu', '0,3467', 1177)
       }) +
       buildProcessCard({ id: 'przygowaniePlac', icon: '&#128218;', label: przygowaniePlac.label, result: przygowaniePlac, color: 'indigo',
         extraRows: [
           { label: 'Palety_z_20K plac', value: przygowaniePlac.paletyZ20K },
           { label: 'PE plac + kont. Na placu ST', value: (przygowaniePlac.pelnePalety || 0) + ' + ' + (przygowaniePlac.kontenerST || 0) },
           { label: 'FTE_20K + FTE_FP', value: przygowaniePlac.fte20K + ' + ' + przygowaniePlac.fteFP },
-        ]
+        ],
+        tooltip: ttTwoCompDiff('Palety_z_20K plac', 'PE plac + kont. Na placu ST', '1,56', 261, '1,22', 334)
       }) +
       buildProcessCard({ id: 'wstawaniePlac', icon: '&#128230;', label: wstawaniePlac.label, result: wstawaniePlac, color: 'indigo',
         extraRows: [
           { label: 'Palety_z_20K plac', value: wstawaniePlac.paletyZ20K },
           { label: 'PE plac + kont. Na placu ST', value: (wstawaniePlac.pelnePalety||0) + ' + ' + (wstawaniePlac.kontenerNaPlacu_ST||0) },
           { label: 'FTE_20K + FTE_FP', value: wstawaniePlac.fte20K + ' + ' + wstawaniePlac.fteFP },
-        ]
+        ],
+        tooltip: ttTwoComp('Palety_z_20K plac', 'PE plac + kont. Na placu ST', '2,9073', 140)
       }) +
       buildProcessCard({ id: 'drobnicaPlac', icon: '&#128269;', label: drobnicaPlac.label, result: drobnicaPlac, color: 'indigo',
         extraRows: [
           { label: 'ATII Outbound (count<20, vol<0.1)', value: drobnicaPlac.drobnicalItems },
-        ]
+        ],
+        tooltip: ttSimple('Poz. ATII', 'ATII Outbound (count&lt;20, vol&lt;0.1, isDG, TaskClose blank)', '0,44', 927)
       }) +
     '</div>' +
 
@@ -630,22 +651,28 @@ export function renderProcessesTab(staffing, trucks = [], selectedSisSet = null)
     '</div>' +
     '<div class="process-cards">' +
       buildProcessCard({ id: 'sortingCrossRampa', icon: '&#8635;', label: sortingCrossRampa.label, result: sortingCrossRampa, color: 'purple',
-        extraRows: [{ label: 'BX Inbound (EffArrival filled, !isDG, 3M)', value: staffing.sortCrossRampaBoxes }]
+        extraRows: [{ label: 'BX Inbound (EffArrival filled, !isDG, 3M)', value: staffing.sortCrossRampaBoxes }],
+        tooltip: ttSimple('Kartony', 'BX Inbound (EffArrival filled, !isDG, Shipper=3M)', '0,3724', 1096)
       }) +
       buildProcessCard({ id: 'sortingCrossPlac', icon: '&#8635;', label: sortingCrossPlac.label, result: sortingCrossPlac, color: 'purple',
-        extraRows: [{ label: 'BX Outbound (!isDG, TaskClose blank, Finished blank)', value: staffing.sortCrossPlacBoxes }]
+        extraRows: [{ label: 'BX Outbound (!isDG, TaskClose blank, Finished blank)', value: staffing.sortCrossPlacBoxes }],
+        tooltip: ttSimple('Kartony', 'BX Outbound (!isDG, TaskClose blank, FinishedScan blank)', '0,3724', 1096)
       }) +
       buildProcessCard({ id: 'recoCrossRampa', icon: '&#128260;', label: recoCrossRampa.label, result: recoCrossRampa, color: 'teal',
-        extraRows: [{ label: 'BX bufor ÷ 10', value: (staffing.sortCrossRampaBoxes || 0) + ' ÷ 10 = ' + recoCrossRampa.palletsReko }]
+        extraRows: [{ label: 'BX bufor ÷ 10', value: (staffing.sortCrossRampaBoxes || 0) + ' ÷ 10 = ' + recoCrossRampa.palletsReko }],
+        tooltip: ttSimple('Palety', 'BX bufor &divide; 10 = palety po rekonstrukcji', '0,342', 1193)
       }) +
       buildProcessCard({ id: 'recoCrossPlac', icon: '&#128260;', label: recoCrossPlac.label, result: recoCrossPlac, color: 'purple',
-        extraRows: [{ label: 'BX plac ÷ 10', value: (staffing.sortCrossPlacBoxes || 0) + ' ÷ 10 = ' + recoCrossPlac.palletsReko }]
+        extraRows: [{ label: 'BX plac ÷ 10', value: (staffing.sortCrossPlacBoxes || 0) + ' ÷ 10 = ' + recoCrossPlac.palletsReko }],
+        tooltip: ttSimple('Palety', 'BX plac &divide; 10 = palety po rekonstrukcji', '0,342', 1193)
       }) +
       buildProcessCard({ id: 'foliaCrossRampa', icon: '&#127973;', label: foliaCrossRampa.label, result: foliaCrossRampa, color: 'teal',
-        extraRows: [{ label: 'Pal. reko × 0.75', value: foliaCrossRampa.palletsReko + ' × 0.75 = ' + foliaCrossRampa.palletsFolia }]
+        extraRows: [{ label: 'Pal. reko × 0.75', value: foliaCrossRampa.palletsReko + ' × 0.75 = ' + foliaCrossRampa.palletsFolia }],
+        tooltip: ttSimple('Palety', '(BX bufor &divide; 10) &times; 0,75 = palety do folii', '3,49', 117)
       }) +
       buildProcessCard({ id: 'foliaCrossPlac', icon: '&#127973;', label: foliaCrossPlac.label, result: foliaCrossPlac, color: 'purple',
-        extraRows: [{ label: 'Pal. reko × 0.75', value: foliaCrossPlac.palletsReko + ' × 0.75 = ' + foliaCrossPlac.palletsFolia }]
+        extraRows: [{ label: 'Pal. reko × 0.75', value: foliaCrossPlac.palletsReko + ' × 0.75 = ' + foliaCrossPlac.palletsFolia }],
+        tooltip: ttSimple('Palety', '(BX plac &divide; 10) &times; 0,75 = palety do folii', '3,49', 117)
       }) +
     '</div>' +
 
@@ -719,7 +746,58 @@ function buildSummaryItem(label, value, highlight) {
   );
 }
 
-function buildProcessCard({ id, icon, label, result, color, extraRows = [] }) {
+function makeTooltip(fields) {
+  return (
+    '<div class="card-tooltip-title">Jak obliczamy dane?</div>' +
+    fields.map(function(f) {
+      const fmls = Array.isArray(f.formulas) ? f.formulas : [f.formula];
+      return (
+        '<div class="card-tooltip-field">' +
+          '<span class="card-tooltip-field-name">' + f.name + '</span>' +
+          fmls.map(function(fml) { return '<span class="card-tooltip-field-formula">' + fml + '</span>'; }).join('') +
+        '</div>'
+      );
+    }).join('')
+  );
+}
+
+const _TT_UTIL = 'FTE &divide; ceil(FTE) &times; 100% &nbsp;&nbsp; ≥90% zielony · ≥70% żółty · &lt;70% szary';
+
+function ttSimple(unitCap, unitSrc, mpu, bench) {
+  return makeTooltip([
+    { name: unitCap + ' (wejście)',     formula: unitSrc },
+    { name: 'Czas łączny',              formula: 'Jedn. &times; ' + mpu + ' min/jedn.' },
+    { name: unitCap + '/os./zmianę',    formula: '480 &times; 85% &divide; ' + mpu + ' &asymp; ' + bench },
+    { name: 'FTE (wynik)',               formula: 'Jedn. &divide; ' + bench + ' = N,NN os.' },
+    { name: 'Ceil (zaokrąglone w górę)', formula: '&lceil; FTE &rceil; &mdash; minimalna obsada' },
+    { name: 'Wykorz. zmiany',           formula: _TT_UTIL },
+  ]);
+}
+
+function ttTwoComp(src20K, srcFP, mpu, bench) {
+  return makeTooltip([
+    { name: 'Benchmark',                formula: '480 &times; 85% &divide; ' + mpu + ' &asymp; ' + bench + ' pal/os./zmianę' },
+    { name: 'FTE_20K',                  formula: src20K + ' &divide; ' + bench },
+    { name: 'FTE_FP',                   formula: srcFP  + ' &divide; ' + bench },
+    { name: 'FTE (wynik)',               formula: 'FTE_20K + FTE_FP = N,NN os.' },
+    { name: 'Ceil (zaokrąglone w górę)', formula: '&lceil; FTE &rceil; &mdash; minimalna obsada' },
+    { name: 'Wykorz. zmiany',           formula: _TT_UTIL },
+  ]);
+}
+
+function ttTwoCompDiff(src20K, srcFP, mpu20K, bench20K, mpuFP, benchFP) {
+  return makeTooltip([
+    { name: 'Benchmark 20K',            formula: '480 &times; 85% &divide; ' + mpu20K + ' &asymp; ' + bench20K + ' pal/os./zmianę' },
+    { name: 'Benchmark FP',             formula: '480 &times; 85% &divide; ' + mpuFP  + ' &asymp; ' + benchFP  + ' pal/os./zmianę' },
+    { name: 'FTE_20K',                  formula: src20K + ' &divide; ' + bench20K },
+    { name: 'FTE_FP',                   formula: srcFP  + ' &divide; ' + benchFP },
+    { name: 'FTE (wynik)',               formula: 'FTE_20K + FTE_FP = N,NN os.' },
+    { name: 'Ceil (zaokrąglone w górę)', formula: '&lceil; FTE &rceil; &mdash; minimalna obsada' },
+    { name: 'Wykorz. zmiany',           formula: _TT_UTIL },
+  ]);
+}
+
+function buildProcessCard({ id, icon, label, result, color, extraRows = [], tooltip = null }) {
   const utilizationColor = result.utilizationPct >= 90 ? 'ok' : result.utilizationPct >= 70 ? 'warn' : 'low';
   const unitCapLabel     = result.unitLabel === 'kartonów' ? 'Kartony' : 'Palety';
   const extraHtml        = extraRows.map(row =>
@@ -728,11 +806,18 @@ function buildProcessCard({ id, icon, label, result, color, extraRows = [] }) {
       '<span class="process-breakdown-value">' + row.value + '</span>' +
     '</div>'
   ).join('');
+  const tooltipHtml = tooltip
+    ? '<div class="card-tooltip-wrap">' +
+        '<span class="card-tooltip-btn">?</span>' +
+        '<div class="card-tooltip-content">' + tooltip + '</div>' +
+      '</div>'
+    : '';
   return (
     '<div class="process-card process-card--' + color + '" id="process-card-' + id + '">' +
       '<div class="process-card-header">' +
         '<span class="process-card-icon">' + icon + '</span>' +
         '<span class="process-card-label">' + label + '</span>' +
+        tooltipHtml +
       '</div>' +
       '<div class="process-card-main">' +
         '<div class="process-people">' +
