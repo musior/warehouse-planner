@@ -7,6 +7,20 @@ import { isSameDay, round, toNumber } from './utils.js';
 // Stała: liczba kartonów BX na paletę (gdy BX nie ma rodzica)
 const BX_PER_PALLET = 30;
 
+// ─── Fallback dla transportów bez SSCC — kraj pochodzenia Wrocław ─────────────
+// Gdy SIS nie istnieje w raporcie InboundSSCC a SOS wskazuje Wrocław,
+// przyjmujemy z góry określone liczby palet i kartonów.
+const WROCLAW_FALLBACK_PALLETS       = 33;  // łączna liczba palet w transporcie
+const WROCLAW_FALLBACK_CROSS_PALLETS = 10;  // ~30,30% — palety do procesu CROSS
+const WROCLAW_FALLBACK_DG_PALLETS    = WROCLAW_FALLBACK_PALLETS - WROCLAW_FALLBACK_CROSS_PALLETS; // 23
+
+/** Czy awizacja pochodzi z Wrocławia (na podstawie kolumny SOS). */
+function isSosWroclaw(sos) {
+  if (!sos) return false;
+  const s = sos.toLowerCase();
+  return s.includes('wrocław') || s.includes('wroclaw');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // POMOCNICZA: znajdź najświeższą datę w awizacjach
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,13 +247,20 @@ function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccO
     else                         over01volItems++;
   }
 
-  const pelnePaletyDg = ssccInbound.filter(r =>
+  const pelnePaletyDgSscc = ssccInbound.filter(r =>
     r.packageTypeCode !== 'BX' &&
     DG_DESTS.has(r.customerShipTo) &&
     r.shipper === DG_SHIPPER &&
     !r.effectiveArrival &&
     activeSisSet.has(r.sisKey)
   ).length;
+
+  // Fallback: transporty Wrocław bez SSCC → doliczamy założone palety DG i CROSS
+  const wroclawNoSsccTrucks  = trucksNoSscc.filter(t => isSosWroclaw(t.sos));
+  const fallbackCrossPallets = wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_CROSS_PALLETS;
+  const fallbackDgPallets    = wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_DG_PALLETS;
+
+  const pelnePaletyDg = pelnePaletyDgSscc + fallbackDgPallets;
 
   const paletyZ20K = over01volItems + over20Items;
 
@@ -370,6 +391,8 @@ function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccO
     over20Items,
     paletyZ20K,
     pelnePaletyDg,
+    fallbackCrossPallets,   // palety CROSS z transportów Wrocław bez SSCC
+    fallbackDgPallets,      // palety DG z transportów Wrocław bez SSCC (już w pelnePaletyDg)
     kontenerSt,
     sortRampaBoxes,
     sortPlacBoxes,
@@ -428,6 +451,19 @@ export function buildKpiForSelection(model, selectedSisSet, { awizacje, ssccInbo
  * @returns {{ part1: number, part2: number, part3: number, part4: number, total: number }}
  */
 export function calcHypotheticalPallets(rows, awizacja) {
+  // Fallback: brak wierszy SSCC + SOS = Wrocław → zakładamy domyślne wartości
+  if (rows.length === 0 && isSosWroclaw(awizacja?.sos)) {
+    return {
+      part1: WROCLAW_FALLBACK_PALLETS,
+      part2: 0,
+      part3: 0,
+      part4: 0,
+      total: WROCLAW_FALLBACK_PALLETS,
+      isFallback: true,
+      fallbackSource: 'wroclaw',
+    };
+  }
+
   // Część 1: nie-BX (palety PE i inne)
   const part1 = rows.filter(r => r.packageTypeCode !== 'BX').length;
 
