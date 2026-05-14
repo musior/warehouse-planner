@@ -8,6 +8,65 @@ import { stripLeadingApostrophe, parseExcelDate, excelTimeToHHMM, toNumber } fro
 
 const SSCC_SEPARATOR = ';';
 
+export const SSCC_INBOUND_FILENAME_PREFIX  = 'InboundSSCCReport_';
+export const SSCC_OUTBOUND_FILENAME_PREFIX = 'SSCCReport_';
+
+const AWIZACJE_REQUIRED_COLS = [
+  'SIS', 'Data', 'SOS', 'Nr. rejestracyjny', 'Godz', 'Linie',
+  'AC', 'ST', 'Cross', 'AC2', 'ST2', 'Healthcare', 'Celne shipmenty',
+];
+
+const SSCC_INBOUND_REQUIRED_COLS = [
+  'SSCC', 'PackageTypeCode', 'TruckIdentification',
+  'BusinessShipper', 'LicensePlate', 'EffectiveArrival',
+];
+
+const SSCC_OUTBOUND_REQUIRED_COLS = [
+  ...SSCC_INBOUND_REQUIRED_COLS,
+  'Lane', 'WaveId', 'PreSortScanDateTime', 'FinishedScanDateTime',
+];
+
+// ── Walidatory ────────────────────────────────────────────────────────────────
+
+function _validateSSCCFilename(filename, isOutbound) {
+  if (!filename) return;
+  if (isOutbound) {
+    const startsWithOutbound = filename.startsWith(SSCC_OUTBOUND_FILENAME_PREFIX);
+    const startsWithInbound  = filename.startsWith(SSCC_INBOUND_FILENAME_PREFIX);
+    if (!startsWithOutbound || startsWithInbound) {
+      throw new Error(
+        `Plik SSCC Outbound powinien zaczynać się od "${SSCC_OUTBOUND_FILENAME_PREFIX}" (podano: ${filename})`
+      );
+    }
+  } else {
+    if (!filename.startsWith(SSCC_INBOUND_FILENAME_PREFIX)) {
+      throw new Error(
+        `Plik SSCC Inbound powinien zaczynać się od "${SSCC_INBOUND_FILENAME_PREFIX}" (podano: ${filename})`
+      );
+    }
+  }
+}
+
+function _validateSSCCHeaders(idxMap, isOutbound) {
+  const required = isOutbound ? SSCC_OUTBOUND_REQUIRED_COLS : SSCC_INBOUND_REQUIRED_COLS;
+  const missing  = required.filter(col => !idxMap.has(col));
+  if (missing.length > 0) {
+    const type = isOutbound ? 'Outbound' : 'Inbound';
+    throw new Error(
+      `Plik nie wygląda jak raport SSCC ${type}. Brakujące kolumny: ${missing.join(', ')}`
+    );
+  }
+}
+
+function _validateAwizacjeHeaders(headers) {
+  const missing = AWIZACJE_REQUIRED_COLS.filter(col => !headers.includes(col));
+  if (missing.length > 0) {
+    throw new Error(
+      `Plik nie wygląda jak raport Awizacji. Brakujące kolumny: ${missing.join(', ')}`
+    );
+  }
+}
+
 // ── Parser SSCC CSV ───────────────────────────────────────────────────────────
 
 /**
@@ -32,8 +91,8 @@ const SSCC_SEPARATOR = ';';
  * @param {ArrayBuffer} buffer
  * @returns {SSCCRow[]}
  */
-export function parseSSCCCsv(buffer) {
-  return _parseSSCCBase(buffer);
+export function parseSSCCCsv(buffer, filename = null) {
+  return _parseSSCCBase(buffer, { filename });
 }
 
 /**
@@ -51,8 +110,8 @@ export function parseSSCCCsv(buffer) {
  *   TruckIdentification → SIS — klucz łączący z awizacjami (jak w Inbound)
  *   EffectiveArrival  → data przybycia (w Outbound jest WYPEŁNIONY — auto już na miejscu)
  */
-export function parseSSCCOutboundCsv(buffer) {
-  return _parseSSCCBase(buffer, { isOutbound: true });
+export function parseSSCCOutboundCsv(buffer, filename = null) {
+  return _parseSSCCBase(buffer, { isOutbound: true, filename });
 }
 
 /**
@@ -61,6 +120,10 @@ export function parseSSCCOutboundCsv(buffer) {
  * (Lane, TaskCloseDate) są automatycznie odczytywane gdy istnieją.
  */
 function _parseSSCCBase(buffer, options = {}) {
+  const { isOutbound = false, filename = null } = options;
+
+  _validateSSCCFilename(filename, isOutbound);
+
   const decoder = new TextDecoder('unicode');
   const text    = decoder.decode(buffer);
   const lines   = text.split('\r\n');
@@ -69,6 +132,8 @@ function _parseSSCCBase(buffer, options = {}) {
   const headers = lines[0].split(SSCC_SEPARATOR);
   const idxMap  = new Map();
   headers.forEach((h, i) => idxMap.set(h.trim(), i));
+
+  _validateSSCCHeaders(idxMap, isOutbound);
 
   const get = (cols, name) => {
     const idx = idxMap.get(name);
@@ -193,6 +258,8 @@ export function parseAwizacjeXlsx(buffer) {
   }
 
   const headers = rawRows[headerRowIdx].map(h => String(h).trim());
+
+  _validateAwizacjeHeaders(headers);
 
   const getIdx = (name) => headers.indexOf(name);
   const idxData    = getIdx('Data');
