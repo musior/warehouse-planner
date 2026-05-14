@@ -2,7 +2,8 @@
 // app.js — inicjalizacja, obsługa plików, filtrowanie dat, koordynacja
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { parseSSCCCsv, parseSSCCOutboundCsv, parseAwizacjeXlsx } from './parsers.js';
+import { parseSSCCCsv, parseSSCCOutboundCsv, parseAwizacjeXlsx,
+         SSCC_INBOUND_FILENAME_PREFIX, SSCC_OUTBOUND_FILENAME_PREFIX } from './parsers.js';
 import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataModel.js';
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
          renderProcessesTab, renderTimesTab, updateFileStatus, updateSlotUI } from './ui.js';
@@ -346,10 +347,15 @@ function setupGlobalDragDrop() {
   document.addEventListener('drop', e => {
     e.preventDefault();
     Array.from(e.dataTransfer.files).forEach(file => {
-      const n = file.name.toLowerCase();
-      if (n.endsWith('.xlsx') || n.endsWith('.xls')) handleAwizacjeFile(file);
-      else if (n.includes('outbound') || n.includes('arrived')) handleSsccArrivedFile(file);
-      else if (n.endsWith('.csv')) handleSsccInboundFile(file);
+      const n = file.name;
+      const nl = n.toLowerCase();
+      if (nl.endsWith('.xlsx') || nl.endsWith('.xls')) {
+        handleAwizacjeFile(file);
+      } else if (nl.endsWith('.csv')) {
+        const isOutbound = n.startsWith(SSCC_OUTBOUND_FILENAME_PREFIX) && !n.startsWith(SSCC_INBOUND_FILENAME_PREFIX);
+        if (isOutbound) handleSsccArrivedFile(file);
+        else            handleSsccInboundFile(file);
+      }
     });
   });
 }
@@ -398,7 +404,7 @@ async function handleSsccInboundFile(file) {
   updateSlotUI('slot-sscc-inbound', 'loading', file.name);
   try {
     const buf = await readFile(file);
-    state.ssccInbound = parseSSCCCsv(buf);
+    state.ssccInbound = parseSSCCCsv(buf, file.name);
     updateFileStatus('sscc-inbound', 'ok');
     updateSlotUI('slot-sscc-inbound', 'ok', file.name);
     tryRebuildModel();
@@ -415,7 +421,7 @@ async function handleSsccArrivedFile(file) {
   updateSlotUI('slot-sscc-arrived', 'loading', file.name);
   try {
     const buf = await readFile(file);
-    state.ssccOutbound = parseSSCCOutboundCsv(buf);
+    state.ssccOutbound = parseSSCCOutboundCsv(buf, file.name);
     // Zachowaj też w ssccArrived dla wstecznej kompatybilności z buildModel
     state.ssccArrived = state.ssccOutbound;
     updateFileStatus('sscc-arrived', 'ok');
