@@ -2,7 +2,7 @@
 // dataModel.js — łączenie danych, obliczenia palet, lista aut
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { isSameDay, round, toNumber } from './utils.js';
+import { isSameDay, round, toNumber } from "./utils.js";
 
 // Stała: liczba kartonów BX na paletę (gdy BX nie ma rodzica)
 const BX_PER_PALLET = 30;
@@ -10,15 +10,42 @@ const BX_PER_PALLET = 30;
 // ─── Fallback dla transportów bez SSCC — kraj pochodzenia Wrocław ─────────────
 // Gdy SIS nie istnieje w raporcie InboundSSCC a SOS wskazuje Wrocław,
 // przyjmujemy z góry określone liczby palet i kartonów.
-const WROCLAW_FALLBACK_PALLETS       = 33;  // łączna liczba palet w transporcie
-const WROCLAW_FALLBACK_CROSS_PALLETS = 10;  // ~30,30% — palety do procesu CROSS
-const WROCLAW_FALLBACK_DG_PALLETS    = WROCLAW_FALLBACK_PALLETS - WROCLAW_FALLBACK_CROSS_PALLETS; // 23
+const WROCLAW_FALLBACK_PALLETS = 33; // łączna liczba palet w transporcie
+const WROCLAW_FALLBACK_CROSS_PALLETS = 10; // ~30,30% — palety do procesu CROSS
+const WROCLAW_FALLBACK_DG_PALLETS =
+  WROCLAW_FALLBACK_PALLETS - WROCLAW_FALLBACK_CROSS_PALLETS; // 23
 
 /** Czy awizacja pochodzi z Wrocławia (na podstawie kolumny SOS). */
 function isSosWroclaw(sos) {
   if (!sos) return false;
   const s = sos.toLowerCase();
-  return s.includes('wrocław') || s.includes('wroclaw');
+  return s.includes("wrocław") || s.includes("wroclaw");
+}
+
+// ─── Fallback per SOS dla transportów bez SSCC ─────────────────────────────
+// st  = pełne palety dla DG
+// st2 = pełne palety dla CROSS
+// ac2 = kartony dla sortowania CROSS
+const SOS_FALLBACKS = {
+  hiszpania: { st: 15, st2: 0, ac2: 0 },
+  banska: { st: 0, st2: 5, ac2: 1 },
+  uk: { st: 37, st2: 0, ac2: 0 },
+  unifam: { st: 0, st2: 23, ac2: 0 },
+  francja: { st: 34, st2: 43, ac2: 3 },
+};
+
+/** Zwraca obiekt fallback dla danego SOS lub null gdy brak dopasowania. */
+function getSosFallback(sos) {
+  if (!sos) return null;
+  const s = sos.toLowerCase();
+  if (s.includes("hiszpan") || s.includes("spain"))
+    return SOS_FALLBACKS.hiszpania;
+  if (s.includes("bansk")) return SOS_FALLBACKS.banska;
+  if (s === "uk" || s.includes("united king")) return SOS_FALLBACKS.uk;
+  if (s.includes("unifam")) return SOS_FALLBACKS.unifam;
+  if (s.includes("francj") || s.includes("france"))
+    return SOS_FALLBACKS.francja;
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,27 +84,31 @@ export function getLatestAwizacjeDate(awizacje) {
  * @param {Date|null}      params.filterDateTo   - filtr do daty (null = użyj planningDate)
  * @returns {WarehouseModel}
  */
-export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
-                             ssccOutbound = [], planningDate,
-                             filterDateFrom = null, filterDateTo = null }) {
-
+export function buildModel({
+  awizacje = [],
+  ssccInbound = [],
+  ssccArrived = [],
+  ssccOutbound = [],
+  planningDate,
+  filterDateFrom = null,
+  filterDateTo = null,
+}) {
   // Zakres dat do filtrowania awizacji
   const dateFrom = filterDateFrom || planningDate;
-  const dateTo   = filterDateTo   || planningDate;
+  const dateTo = filterDateTo || planningDate;
 
   // ── 1. SIS które już przyjechały (są w ssccArrived / Outbound) ─────────────
   // Outbound ma EffectiveArrival WYPEŁNIONY — wszystkie SIS są "przybyłe"
   const arrivedSisSet = new Set(
-    [...ssccArrived, ...ssccOutbound]
-      .map(r => r.sisKey)
-      .filter(Boolean)
+    [...ssccArrived, ...ssccOutbound].map((r) => r.sisKey).filter(Boolean),
   );
 
   // ── 2. Awizacje w wybranym zakresie dat ────────────────────────────────────
-  const awizacjeOnDate = awizacje.filter(a => {
+  const awizacjeOnDate = awizacje.filter((a) => {
     if (!a.data) return false;
-    if (dateFrom && a.data < dateFrom && !isSameDay(a.data, dateFrom)) return false;
-    if (dateTo   && a.data > dateTo   && !isSameDay(a.data, dateTo))   return false;
+    if (dateFrom && a.data < dateFrom && !isSameDay(a.data, dateFrom))
+      return false;
+    if (dateTo && a.data > dateTo && !isSameDay(a.data, dateTo)) return false;
     return true;
   });
 
@@ -86,8 +117,10 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
   // oparty o numer rejestracyjny, żeby nie nadpisywały się nawzajem w Map.
   const awizacjeBySis = new Map();
   for (const a of awizacjeOnDate) {
-    const hasSis = a.sis && a.sis.toLowerCase() !== 'brak';
-    const key = hasSis ? a.sis : (a.nrRejestracyjny || `_brak_${awizacjeBySis.size}`);
+    const hasSis = a.sis && a.sis.toLowerCase() !== "brak";
+    const key = hasSis
+      ? a.sis
+      : a.nrRejestracyjny || `_brak_${awizacjeBySis.size}`;
     awizacjeBySis.set(key, a);
   }
 
@@ -115,7 +148,7 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
     const ssccRows = ssccBySis.get(sis) || [];
 
     // Oblicz hipotetyczną liczbę palet dla tego transportu
-    const pallets = calcHypotheticalPallets(ssccRows, awizacja);
+    const pallets = calcHypotheticalPallets(ssccRows, awizacja, hasArrived);
 
     // Zbierz unikalne kierunki docelowe
     const destinations = getDestinations(ssccRows);
@@ -125,39 +158,49 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
 
     trucks.push({
       sis,
-      sisDisplay:      awizacja.sis || 'brak',
+      sisDisplay: awizacja.sis || "brak",
       awizacja,
       ssccRows,
       hasArrived,
-      status:          hasArrived ? 'arrived' : (ssccRows.length > 0 ? 'inbound' : 'no-sscc'),
-      truckPlate:      awizacja.nrRejestracyjny,
-      sos:             awizacja.sos,
-      godzTime:        awizacja.godzTime,
-      isCelne:         awizacja.isCelne,
-      isKontener:      awizacja.isKontener,
+      status: hasArrived
+        ? "arrived"
+        : ssccRows.length > 0
+          ? "inbound"
+          : "no-sscc",
+      truckPlate: awizacja.nrRejestracyjny,
+      sos: awizacja.sos,
+      godzTime: awizacja.godzTime,
+      isCelne: awizacja.isCelne,
+      isKontener: awizacja.isKontener,
       isKontenerManual: awizacja.isKontenerManual,
-      carrier:         firstRow?.carrier || '',
-      businessShipper: firstRow?.businessShipper || '',  // np. "DE Juechen EDC"
-      licensePlate:    firstRow?.licensePlate || '',      // rejestracja z SSCC
+      carrier: firstRow?.carrier || "",
+      businessShipper: firstRow?.businessShipper || "", // np. "DE Juechen EDC"
+      licensePlate: firstRow?.licensePlate || "", // rejestracja z SSCC
       pallets,
       destinations,
-      ssccCount:       ssccRows.length,
+      ssccCount: ssccRows.length,
     });
   }
 
   // Posortuj auta wg godziny awizacji
   trucks.sort((a, b) => {
-    if (a.godzTime === '—') return 1;
-    if (b.godzTime === '—') return -1;
+    if (a.godzTime === "—") return 1;
+    if (b.godzTime === "—") return -1;
     return a.godzTime.localeCompare(b.godzTime);
   });
 
   // ── 6. Globalne KPI ────────────────────────────────────────────────────────
-  const trucksInbound  = trucks.filter(t => t.status === 'inbound');
-  const trucksArrived  = trucks.filter(t => t.status === 'arrived');
-  const trucksNoSscc   = trucks.filter(t => t.status === 'no-sscc');
+  const trucksInbound = trucks.filter((t) => t.status === "inbound");
+  const trucksArrived = trucks.filter((t) => t.status === "arrived");
+  const trucksNoSscc = trucks.filter((t) => t.status === "no-sscc");
 
-  const kpi = computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccOutbound);
+  const kpi = computeKpiFromData(
+    trucks,
+    awizacjeOnDate,
+    awizacje,
+    ssccInbound,
+    ssccOutbound,
+  );
 
   return {
     planningDate,
@@ -177,54 +220,81 @@ export function buildModel({ awizacje = [], ssccInbound = [], ssccArrived = [],
 // OBLICZANIE KPI Z TABLIC DANYCH (reużywane przez buildModel i buildKpiForSelection)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccOutbound) {
-  const trucksInbound   = trucks.filter(t => t.status === 'inbound');
-  const trucksArrived   = trucks.filter(t => t.status === 'arrived');
-  const trucksNoSscc    = trucks.filter(t => t.status === 'no-sscc');
+function computeKpiFromData(
+  trucks,
+  awizacjeOnDate,
+  awizacje,
+  ssccInbound,
+  ssccOutbound,
+) {
+  const trucksInbound = trucks.filter((t) => t.status === "inbound");
+  const trucksArrived = trucks.filter((t) => t.status === "arrived");
+  const trucksNoSscc = trucks.filter((t) => t.status === "no-sscc");
 
-  const totalPalletsInbound = trucksInbound.reduce((s, t) => s + t.pallets.total, 0);
-  const totalPalletsAll     = trucks.reduce((s, t) => s + t.pallets.total, 0);
+  const totalPalletsInbound = trucksInbound.reduce(
+    (s, t) => s + t.pallets.total,
+    0,
+  );
+  const totalPalletsAll = trucks.reduce((s, t) => s + t.pallets.total, 0);
 
-  const kontenerRegularRows    = awizacjeOnDate.filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'W drodze');
-  const kontenerRegularPallets = kontenerRegularRows.reduce((s, a) => s + a.st + a.st2, 0);
+  const kontenerRegularRows = awizacjeOnDate.filter(
+    (a) =>
+      a.isKontener && !a.isKontenerManual && a.celneShipmenty === "W drodze",
+  );
+  const kontenerRegularPallets = kontenerRegularRows.reduce(
+    (s, a) => s + a.st + a.st2,
+    0,
+  );
 
-  const kontenerManualRows    = awizacjeOnDate.filter(a => a.isKontenerManual && a.celneShipmenty === 'W drodze');
-  const kontenerManualCartons = kontenerManualRows.reduce((s, a) => s + a.ac + a.ac2, 0);
+  const kontenerManualRows = awizacjeOnDate.filter(
+    (a) => a.isKontenerManual && a.celneShipmenty === "W drodze",
+  );
+  const kontenerManualCartons = kontenerManualRows.reduce(
+    (s, a) => s + a.ac + a.ac2,
+    0,
+  );
 
   const totalPalletsFromSSCC = round(totalPalletsAll + kontenerRegularPallets);
 
-  const activeSisSet = new Set(awizacjeOnDate.map(a => a.sis).filter(Boolean));
+  const activeSisSet = new Set(
+    awizacjeOnDate.map((a) => a.sis).filter(Boolean),
+  );
 
-  const DG_DEST       = 'PL Dabrowa Hub';
-  const DG_SHIPPER    = '3M';
-  const CROSS_EXCLUDE = new Set([DG_DEST, 'SOLVENTUM FIEGE DABROWA PL 3PL DC']);
-  const DG_DESTS      = new Set([DG_DEST, 'SOLVENTUM FIEGE DABROWA PL 3PL DC']);
+  const DG_DEST = "PL Dabrowa Hub";
+  const DG_SHIPPER = "3M";
+  const CROSS_EXCLUDE = new Set([DG_DEST, "SOLVENTUM FIEGE DABROWA PL 3PL DC"]);
+  const DG_DESTS = new Set([DG_DEST, "SOLVENTUM FIEGE DABROWA PL 3PL DC"]);
 
-  const bxDg = ssccInbound.filter(r =>
-    r.packageTypeCode === 'BX'  &&
-    r.customerShipTo  === DG_DEST &&
-    r.shipper         === DG_SHIPPER &&
-    !r.effectiveArrival &&
-    activeSisSet.has(r.sisKey)
+  const bxDg = ssccInbound.filter(
+    (r) =>
+      r.packageTypeCode === "BX" &&
+      r.customerShipTo === DG_DEST &&
+      r.shipper === DG_SHIPPER &&
+      !r.effectiveArrival &&
+      activeSisSet.has(r.sisKey),
   ).length;
-  const dgKontenerCartons = kontenerRegularRows.reduce((s, a) => s + a.ac + a.ac2, 0);
-  const sortingDgBoxes    = bxDg + dgKontenerCartons;
+  const dgKontenerCartons = kontenerRegularRows.reduce(
+    (s, a) => s + a.ac + a.ac2,
+    0,
+  );
+  const sortingDgBoxes = bxDg + dgKontenerCartons;
 
-  const bxCross = ssccInbound.filter(r =>
-    r.packageTypeCode === 'BX'  &&
-    !CROSS_EXCLUDE.has(r.customerShipTo) &&
-    r.shipper         === DG_SHIPPER &&
-    !r.effectiveArrival &&
-    activeSisSet.has(r.sisKey)
+  const bxCrossFromSscc = ssccInbound.filter(
+    (r) =>
+      r.packageTypeCode === "BX" &&
+      !CROSS_EXCLUDE.has(r.customerShipTo) &&
+      r.shipper === DG_SHIPPER &&
+      !r.effectiveArrival &&
+      activeSisSet.has(r.sisKey),
   ).length;
-  const sortingCrossBoxes = bxCross;
 
-  const bxDgRows = ssccInbound.filter(r =>
-    r.packageTypeCode === 'BX'  &&
-    DG_DESTS.has(r.customerShipTo) &&
-    r.shipper         === DG_SHIPPER &&
-    !r.effectiveArrival &&
-    activeSisSet.has(r.sisKey)
+  const bxDgRows = ssccInbound.filter(
+    (r) =>
+      r.packageTypeCode === "BX" &&
+      DG_DESTS.has(r.customerShipTo) &&
+      r.shipper === DG_SHIPPER &&
+      !r.effectiveArrival &&
+      activeSisSet.has(r.sisKey),
   );
 
   const atiiMap = new Map();
@@ -239,66 +309,100 @@ function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccO
 
   let drobnicalItems = 0;
   let over01volItems = 0;
-  let over20Items    = 0;
+  let over20Items = 0;
 
   for (const [, entry] of atiiMap) {
-    if (entry.count >= 20)       over20Items++;
+    if (entry.count >= 20) over20Items++;
     else if (entry.volume < 0.1) drobnicalItems++;
-    else                         over01volItems++;
+    else over01volItems++;
   }
 
-  const pelnePaletyDgSscc = ssccInbound.filter(r =>
-    r.packageTypeCode !== 'BX' &&
-    DG_DESTS.has(r.customerShipTo) &&
-    r.shipper === DG_SHIPPER &&
-    !r.effectiveArrival &&
-    activeSisSet.has(r.sisKey)
+  const pelnePaletyDgSscc = ssccInbound.filter(
+    (r) =>
+      r.packageTypeCode !== "BX" &&
+      DG_DESTS.has(r.customerShipTo) &&
+      r.shipper === DG_SHIPPER &&
+      !r.effectiveArrival &&
+      activeSisSet.has(r.sisKey),
   ).length;
 
   // Fallback: transporty Wrocław bez SSCC → doliczamy założone palety DG i CROSS
-  const wroclawNoSsccTrucks  = trucksNoSscc.filter(t => isSosWroclaw(t.sos));
-  const fallbackCrossPallets = wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_CROSS_PALLETS;
-  const fallbackDgPallets    = wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_DG_PALLETS;
+  const wroclawNoSsccTrucks = trucksNoSscc.filter((t) => isSosWroclaw(t.sos));
+  const fallbackCrossPallets =
+    wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_CROSS_PALLETS;
+  const fallbackDgPallets =
+    wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_DG_PALLETS;
 
-  const pelnePaletyDg = pelnePaletyDgSscc + fallbackDgPallets;
+  // Fallback: transporty SOS (Hiszp./Banska/UK/Unifam/Francja) bez SSCC
+  const sosFallbackTrucks = trucksNoSscc.filter(
+    (t) => !isSosWroclaw(t.sos) && getSosFallback(t.sos),
+  );
+  const fallbackSosDgPallets = sosFallbackTrucks.reduce(
+    (s, t) => s + (getSosFallback(t.sos)?.st || 0),
+    0,
+  );
+  const fallbackSosCrossPallets = sosFallbackTrucks.reduce(
+    (s, t) => s + (getSosFallback(t.sos)?.st2 || 0),
+    0,
+  );
+  const fallbackSosCrossCartons = sosFallbackTrucks.reduce(
+    (s, t) => s + (getSosFallback(t.sos)?.ac2 || 0),
+    0,
+  );
+
+  const sortingCrossBoxes = bxCrossFromSscc + fallbackSosCrossCartons;
+
+  const pelnePaletyDg =
+    pelnePaletyDgSscc + fallbackDgPallets + fallbackSosDgPallets;
 
   const paletyZ20K = over01volItems + over20Items;
 
-  const bxDgRampaRows = ssccInbound.filter(r =>
-    r.packageTypeCode === 'BX'  &&
-    r.customerShipTo  === DG_DEST &&
-    r.shipper         === DG_SHIPPER &&
-    r.effectiveArrival
+  const bxDgRampaRows = ssccInbound.filter(
+    (r) =>
+      r.packageTypeCode === "BX" &&
+      r.customerShipTo === DG_DEST &&
+      r.shipper === DG_SHIPPER &&
+      r.effectiveArrival,
   );
   const bxDgRampa = bxDgRampaRows.length;
 
   const kontenerRozladowanyAC = awizacje
-    .filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'Rozładowany')
+    .filter(
+      (a) =>
+        a.isKontener &&
+        !a.isKontenerManual &&
+        a.celneShipmenty === "Rozładowany",
+    )
     .reduce((s, a) => s + a.ac + a.ac2, 0);
   const sortRampaBoxes = bxDgRampa + kontenerRozladowanyAC;
 
-  const bxDgPlacRows = ssccOutbound.filter(r =>
-    r.packageTypeCode === 'BX' && r.isDG && !r.taskCloseDate
+  const bxDgPlacRows = ssccOutbound.filter(
+    (r) => r.packageTypeCode === "BX" && r.isDG && !r.taskCloseDate,
   );
   const bxDgPlac = bxDgPlacRows.length;
   const kontenerNaPlacu = awizacje
-    .filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'Na placu')
+    .filter(
+      (a) =>
+        a.isKontener && !a.isKontenerManual && a.celneShipmenty === "Na placu",
+    )
     .reduce((s, a) => s + a.ac + a.ac2, 0);
   const sortPlacBoxes = bxDgPlac + kontenerNaPlacu;
 
-  const sortCrossRampaBoxes = ssccInbound.filter(r =>
-    r.packageTypeCode === 'BX' &&
-    !r.isDG &&
-    r.shipper === DG_SHIPPER &&
-    r.effectiveArrival
+  const sortCrossRampaBoxes = ssccInbound.filter(
+    (r) =>
+      r.packageTypeCode === "BX" &&
+      !r.isDG &&
+      r.shipper === DG_SHIPPER &&
+      r.effectiveArrival,
   ).length;
 
-  const sortCrossPlacBoxes = ssccOutbound.filter(r =>
-    r.packageTypeCode === 'BX' &&
-    !r.isDG &&
-    r.shipper === DG_SHIPPER &&
-    !r.taskCloseDate &&
-    !r.finishedScanDateTime
+  const sortCrossPlacBoxes = ssccOutbound.filter(
+    (r) =>
+      r.packageTypeCode === "BX" &&
+      !r.isDG &&
+      r.shipper === DG_SHIPPER &&
+      !r.taskCloseDate &&
+      !r.finishedScanDateTime,
   ).length;
 
   const kontenerSt = kontenerRegularRows.reduce((s, a) => s + a.st + a.st2, 0);
@@ -307,47 +411,61 @@ function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccO
   for (const r of bxDgRampaRows) {
     const atii = r.additionalTradeItemIdentification;
     if (!atii) continue;
-    if (!atiiMapDrobnicaRampa.has(atii)) atiiMapDrobnicaRampa.set(atii, { count: 0, volume: 0 });
+    if (!atiiMapDrobnicaRampa.has(atii))
+      atiiMapDrobnicaRampa.set(atii, { count: 0, volume: 0 });
     const e = atiiMapDrobnicaRampa.get(atii);
-    e.count++;  e.volume += r.volume || 0;
+    e.count++;
+    e.volume += r.volume || 0;
   }
-  const drobnicalItemsRampa = [...atiiMapDrobnicaRampa.values()]
-    .filter(e => e.count < 20 && e.volume < 0.1).length;
+  const drobnicalItemsRampa = [...atiiMapDrobnicaRampa.values()].filter(
+    (e) => e.count < 20 && e.volume < 0.1,
+  ).length;
 
   const atiiMapDrobnicaPlac = new Map();
   for (const r of bxDgPlacRows) {
     const atii = r.additionalTradeItemIdentification;
     if (!atii) continue;
-    if (!atiiMapDrobnicaPlac.has(atii)) atiiMapDrobnicaPlac.set(atii, { count: 0, volume: 0 });
+    if (!atiiMapDrobnicaPlac.has(atii))
+      atiiMapDrobnicaPlac.set(atii, { count: 0, volume: 0 });
     const e = atiiMapDrobnicaPlac.get(atii);
-    e.count++;  e.volume += r.volume || 0;
+    e.count++;
+    e.volume += r.volume || 0;
   }
-  const drobnicalItemsPlac = [...atiiMapDrobnicaPlac.values()]
-    .filter(e => e.count < 20 && e.volume < 0.1).length;
+  const drobnicalItemsPlac = [...atiiMapDrobnicaPlac.values()].filter(
+    (e) => e.count < 20 && e.volume < 0.1,
+  ).length;
 
   const atiiMapRampa = new Map();
   for (const r of bxDgRampaRows) {
     const atii = r.additionalTradeItemIdentification;
     if (!atii) continue;
-    if (!atiiMapRampa.has(atii)) atiiMapRampa.set(atii, { count: 0, volume: 0 });
+    if (!atiiMapRampa.has(atii))
+      atiiMapRampa.set(atii, { count: 0, volume: 0 });
     const e = atiiMapRampa.get(atii);
     e.count++;
     e.volume += r.volume || 0;
   }
-  let over01volRampa = 0, over20Rampa = 0;
+  let over01volRampa = 0,
+    over20Rampa = 0;
   for (const [, e] of atiiMapRampa) {
-    if (e.count >= 20)         over20Rampa++;
-    else if (e.volume >= 0.1)  over01volRampa++;
+    if (e.count >= 20) over20Rampa++;
+    else if (e.volume >= 0.1) over01volRampa++;
   }
   const paletyZ20KRampa = over01volRampa + over20Rampa;
-  const pelnePaletyDgRampa = ssccInbound.filter(r =>
-    r.packageTypeCode !== 'BX' &&
-    DG_DESTS.has(r.customerShipTo) &&
-    r.shipper === DG_SHIPPER &&
-    r.effectiveArrival
+  const pelnePaletyDgRampa = ssccInbound.filter(
+    (r) =>
+      r.packageTypeCode !== "BX" &&
+      DG_DESTS.has(r.customerShipTo) &&
+      r.shipper === DG_SHIPPER &&
+      r.effectiveArrival,
   ).length;
   const kontenerRozladowanyST = awizacje
-    .filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'Rozładowany')
+    .filter(
+      (a) =>
+        a.isKontener &&
+        !a.isKontenerManual &&
+        a.celneShipmenty === "Rozładowany",
+    )
     .reduce((s, a) => s + a.st + a.st2, 0);
 
   const atiiMapPlac = new Map();
@@ -359,28 +477,30 @@ function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccO
     e.count++;
     e.volume += r.volume || 0;
   }
-  let over01volPlac = 0, over20Plac = 0;
+  let over01volPlac = 0,
+    over20Plac = 0;
   for (const [, e] of atiiMapPlac) {
-    if (e.count >= 20)         over20Plac++;
-    else if (e.volume >= 0.1)  over01volPlac++;
+    if (e.count >= 20) over20Plac++;
+    else if (e.volume >= 0.1) over01volPlac++;
   }
   const paletyZ20KPlac = over01volPlac + over20Plac;
-  const pelnePaletyDgPlac = ssccOutbound.filter(r =>
-    r.packageTypeCode !== 'BX' &&
-    r.isDG &&
-    !r.taskCloseDate
+  const pelnePaletyDgPlac = ssccOutbound.filter(
+    (r) => r.packageTypeCode !== "BX" && r.isDG && !r.taskCloseDate,
   ).length;
   const kontenerNaPlacu_ST = awizacje
-    .filter(a => a.isKontener && !a.isKontenerManual && a.celneShipmenty === 'Na placu')
+    .filter(
+      (a) =>
+        a.isKontener && !a.isKontenerManual && a.celneShipmenty === "Na placu",
+    )
     .reduce((s, a) => s + a.st + a.st2, 0);
 
   return {
-    totalTrucks:             trucks.length,
-    inboundTrucks:           trucksInbound.length,
-    arrivedTrucks:           trucksArrived.length,
-    noSsccTrucks:            trucksNoSscc.length,
-    totalPalletsInbound:     round(totalPalletsInbound),
-    totalPalletsAll:         round(totalPalletsAll),
+    totalTrucks: trucks.length,
+    inboundTrucks: trucksInbound.length,
+    arrivedTrucks: trucksArrived.length,
+    noSsccTrucks: trucksNoSscc.length,
+    totalPalletsInbound: round(totalPalletsInbound),
+    totalPalletsAll: round(totalPalletsAll),
     totalPalletsFromSSCC,
     kontenerRegularPallets,
     kontenerManualCartons,
@@ -391,8 +511,11 @@ function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccO
     over20Items,
     paletyZ20K,
     pelnePaletyDg,
-    fallbackCrossPallets,   // palety CROSS z transportów Wrocław bez SSCC
-    fallbackDgPallets,      // palety DG z transportów Wrocław bez SSCC (już w pelnePaletyDg)
+    fallbackCrossPallets, // palety CROSS z transportów Wrocław bez SSCC
+    fallbackDgPallets, // palety DG z transportów Wrocław bez SSCC (już w pelnePaletyDg)
+    fallbackSosDgPallets, // palety DG z fallback SOS (już w pelnePaletyDg)
+    fallbackSosCrossPallets, // pełne palety CROSS z fallback SOS
+    fallbackSosCrossCartons, // kartony CROSS z fallback SOS (już w sortingCrossBoxes)
     kontenerSt,
     sortRampaBoxes,
     sortPlacBoxes,
@@ -418,7 +541,11 @@ function computeKpiFromData(trucks, awizacjeOnDate, awizacje, ssccInbound, ssccO
  * Przelicza KPI tylko dla wybranych transportów (po SIS).
  * selectedSisSet = null oznacza "wszystkie".
  */
-export function buildKpiForSelection(model, selectedSisSet, { awizacje, ssccInbound, ssccOutbound }) {
+export function buildKpiForSelection(
+  model,
+  selectedSisSet,
+  { awizacje, ssccInbound, ssccOutbound },
+) {
   if (!selectedSisSet) return model.kpi;
 
   // Filtrujemy tylko trucks i awizacjeOnDate — z nich buduje się activeSisSet,
@@ -426,10 +553,18 @@ export function buildKpiForSelection(model, selectedSisSet, { awizacje, ssccInbo
   // ssccInbound, ssccOutbound i awizacje przekazujemy w całości, dzięki czemu
   // obliczenia Magazynu (oparte na effectiveArrival / ssccOutbound / celneShipmenty)
   // zawsze operują na pełnych danych i nie są filtrowane przez wybór transportów.
-  const selectedTrucks        = model.trucks.filter(t => selectedSisSet.has(t.sis));
-  const filteredAwizacjeOnDate = model.awizacjeOnDate.filter(a => selectedSisSet.has(a.sis));
+  const selectedTrucks = model.trucks.filter((t) => selectedSisSet.has(t.sis));
+  const filteredAwizacjeOnDate = model.awizacjeOnDate.filter((a) =>
+    selectedSisSet.has(a.sis),
+  );
 
-  return computeKpiFromData(selectedTrucks, filteredAwizacjeOnDate, awizacje, ssccInbound, ssccOutbound);
+  return computeKpiFromData(
+    selectedTrucks,
+    filteredAwizacjeOnDate,
+    awizacje,
+    ssccInbound,
+    ssccOutbound,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -450,27 +585,43 @@ export function buildKpiForSelection(model, selectedSisSet, { awizacje, ssccInbo
  * @param {AwizacjaRow|null} awizacja
  * @returns {{ part1: number, part2: number, part3: number, part4: number, total: number }}
  */
-export function calcHypotheticalPallets(rows, awizacja) {
-  // Fallback: brak wierszy SSCC + SOS = Wrocław → zakładamy domyślne wartości
-  if (rows.length === 0 && isSosWroclaw(awizacja?.sos)) {
-    return {
-      part1: WROCLAW_FALLBACK_PALLETS,
-      part2: 0,
-      part3: 0,
-      part4: 0,
-      total: WROCLAW_FALLBACK_PALLETS,
-      isFallback: true,
-      fallbackSource: 'wroclaw',
-    };
+export function calcHypotheticalPallets(rows, awizacja, hasArrived = false) {
+  // Fallback: brak wierszy SSCC → zakładamy domyślne wartości wg SOS
+  // Nie stosujemy fallbacku gdy auto już przyjechało (SIS w ssccOutbound/ssccArrived)
+  if (rows.length === 0 && !hasArrived) {
+    if (isSosWroclaw(awizacja?.sos)) {
+      return {
+        part1: WROCLAW_FALLBACK_PALLETS,
+        part2: 0,
+        part3: 0,
+        part4: 0,
+        total: WROCLAW_FALLBACK_PALLETS,
+        isFallback: true,
+        fallbackSource: "wroclaw",
+      };
+    }
+    const fb = getSosFallback(awizacja?.sos);
+    if (fb) {
+      const total = fb.st + fb.st2;
+      return {
+        part1: total,
+        part2: 0,
+        part3: 0,
+        part4: 0,
+        total,
+        isFallback: true,
+        fallbackSource: "sos",
+      };
+    }
   }
 
   // Część 1: nie-BX (palety PE i inne)
-  const part1 = rows.filter(r => r.packageTypeCode !== 'BX').length;
+  const part1 = rows.filter((r) => r.packageTypeCode !== "BX").length;
 
   // Część 2: BX bez palety-rodzica (parentPackageTypeCode pusty) podzielone przez BX_PER_PALLET
   // parentPackageTypeCode jest wypełniony gdy BX należy do palety PE
-  const bxWithoutParent = rows.filter(r =>
-    r.packageTypeCode === 'BX' && !r.parentPackageTypeCode
+  const bxWithoutParent = rows.filter(
+    (r) => r.packageTypeCode === "BX" && !r.parentPackageTypeCode,
   ).length;
   const part2 = bxWithoutParent / BX_PER_PALLET;
 
@@ -478,7 +629,7 @@ export function calcHypotheticalPallets(rows, awizacja) {
   // parentSscc = numer SSCC palety nadrzędnej (gdy karton leży na palecie)
   const parentSsccSet = new Set();
   for (const r of rows) {
-    if (r.packageTypeCode === 'BX' && r.parentSscc) {
+    if (r.packageTypeCode === "BX" && r.parentSscc) {
       parentSsccSet.add(r.parentSscc);
     }
   }
@@ -486,7 +637,11 @@ export function calcHypotheticalPallets(rows, awizacja) {
 
   // Część 4: kontenery z awizacji
   let part4 = 0;
-  if (awizacja && awizacja.isKontener && awizacja.celneShipmenty === 'W drodze') {
+  if (
+    awizacja &&
+    awizacja.isKontener &&
+    awizacja.celneShipmenty === "W drodze"
+  ) {
     part4 = toNumber(awizacja.st) + toNumber(awizacja.st2);
   }
 
@@ -507,8 +662,8 @@ export function getDestinations(rows) {
   const map = new Map();
 
   for (const r of rows) {
-    const code = r.customerShipTo || '—';
-    const country = r.destinationCountryCode || '';
+    const code = r.customerShipTo || "—";
+    const country = r.destinationCountryCode || "";
 
     const key = code;
     if (!map.has(key)) {
@@ -536,17 +691,17 @@ export function buildSsccDetailTable(rows) {
 
   // Grupuj BX wg numeru SSCC palety-rodzica (parentSscc)
   for (const r of rows) {
-    if (r.packageTypeCode === 'BX') {
-      const palletKey = r.parentSscc || '__no_parent__';
+    if (r.packageTypeCode === "BX") {
+      const palletKey = r.parentSscc || "__no_parent__";
       if (!palletMap.has(palletKey)) {
         palletMap.set(palletKey, {
-          palletSscc:      palletKey === '__no_parent__' ? null : palletKey,
-          hasParent:       !!r.parentSscc,
-          destination:     r.customerShipTo || '—',
-          country:         r.destinationCountryCode || '',
-          businessShipper: r.businessShipper || '',
-          boxes:           [],
-          totalWeight:     0,
+          palletSscc: palletKey === "__no_parent__" ? null : palletKey,
+          hasParent: !!r.parentSscc,
+          destination: r.customerShipTo || "—",
+          country: r.destinationCountryCode || "",
+          businessShipper: r.businessShipper || "",
+          boxes: [],
+          totalWeight: 0,
         });
       }
       const group = palletMap.get(palletKey);
@@ -557,18 +712,18 @@ export function buildSsccDetailTable(rows) {
 
   // Dodaj PE (palety) które nie są rodzicami BX — samodzielne palety
   for (const r of rows) {
-    if (r.packageTypeCode !== 'BX') {
+    if (r.packageTypeCode !== "BX") {
       const key = `PE_${r.ssccNumber}`;
       palletMap.set(key, {
-        palletSscc:      r.ssccNumber || '—',
-        hasParent:       false,
-        packageType:     r.packageTypeCode,
-        destination:     r.customerShipTo || '—',
-        country:         r.destinationCountryCode || '',
-        businessShipper: r.businessShipper || '',
-        boxes:           [],
-        totalWeight:     r.weight || 0,
-        isPallet:        true,
+        palletSscc: r.ssccNumber || "—",
+        hasParent: false,
+        packageType: r.packageTypeCode,
+        destination: r.customerShipTo || "—",
+        country: r.destinationCountryCode || "",
+        businessShipper: r.businessShipper || "",
+        boxes: [],
+        totalWeight: r.weight || 0,
+        isPallet: true,
       });
     }
   }
