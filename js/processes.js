@@ -58,6 +58,13 @@ export const PROCESSES = {
     productivity:   0.85,
     // ~1193 pal./os./zmianę
   },
+  recoCrossFullPallet: {
+    id:             'recoCrossFullPallet',
+    label:          'Rekonstrukcja CROSS — pełna paleta',
+    minutesPerUnit: 0.142,    // min/paletę (wejście: pełne palety ST2 bez SSCC)
+    productivity:   0.85,
+    // do korekty — tymczasowa stawka dla pełnych palet z fallback SOS
+  },
   foliaCross: {
     id:             'foliaCross',
     label:          'Foliowanie CROSS',
@@ -195,12 +202,34 @@ export const calcDrobnical       = (items)    => calcProcess(PROCESSES.drobnical
 export const calcSortingRampa    = (boxes)    => calcProcess(PROCESSES.sortingRampa,    boxes,    'kartonów');
 export const calcSortingPlac     = (boxes)    => calcProcess(PROCESSES.sortingPlac,     boxes,    'kartonów');
 
-export function calcRecoCross(bxCross) {
+export function calcRecoCross(bxCross, fullPallets = 0) {
   const paletReko = bxCross / 10;
-  const result    = calcProcess(PROCESSES.recoCross, paletReko, 'palet po reko');
-  result.inputBoxes  = bxCross;
-  result.palletsReko = r(paletReko, 1);
-  return result;
+
+  const benchBx = SHIFT_MINUTES * PROCESSES.recoCross.productivity          / PROCESSES.recoCross.minutesPerUnit;
+  const benchFP = SHIFT_MINUTES * PROCESSES.recoCrossFullPallet.productivity / PROCESSES.recoCrossFullPallet.minutesPerUnit;
+
+  const fteBx   = paletReko   / benchBx;
+  const fteFP   = fullPallets / benchFP;
+  const fteExact  = fteBx + fteFP;
+  const peopleCeil = Math.ceil(fteExact);
+
+  return {
+    processId:      PROCESSES.recoCross.id,
+    label:          PROCESSES.recoCross.label,
+    unitCount:      r(paletReko + fullPallets, 1),
+    unitLabel:      'palet po reko',
+    minutesNeeded:  r(PROCESSES.recoCross.minutesPerUnit * paletReko +
+                      PROCESSES.recoCrossFullPallet.minutesPerUnit * fullPallets, 1),
+    peopleExact:    r(fteExact, 2),
+    peopleCeil,
+    unitsPerPerson: r(benchBx, 0),
+    utilizationPct: peopleCeil > 0 ? r((fteExact / peopleCeil) * 100, 1) : 0,
+    inputBoxes:     bxCross,
+    palletsReko:    r(paletReko, 1),
+    fullPallets,
+    fteBx:          r(fteBx, 3),
+    fteFP:          r(fteFP, 3),
+  };
 }
 
 export function calcFoliaCross(bxCross) {
@@ -467,8 +496,9 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
   const drobnical          = calcDrobnical           (kpi.drobnicalItems         || 0);
   const wstawianiePalet    = calcWstawianiePaletDg   (paletyZ20K, pelnePaletyDg, kontenerSt);
   const przygotowaniePalet = calcPrzygotowaniePaletDg(paletyZ20K, pelnePaletyDg, kontenerSt);
+  const fullPaletyCross    = kpi.fallbackSosCrossPallets || 0;
   const sortingCross       = calcSortingCross        (bxCross);
-  const recoCross          = calcRecoCross           (bxCross);
+  const recoCross          = calcRecoCross           (bxCross, fullPaletyCross);
   const foliaCross         = calcFoliaCross          (bxCross);
 
   const sortingRampa       = calcProcess(PROCESSES.sortingRampa,     kpi.sortRampaBoxes      || 0, 'kartonow');
