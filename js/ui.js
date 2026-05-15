@@ -804,15 +804,30 @@ export function renderProcessesTab(
       extraRows: [
         {
           label: "Kartony ÷ 10",
-          value: staffing.crossBoxes + " ÷ 10 = " + staffing.crossPalletsReko,
+          value: staffing.crossBoxes + " ÷ 10 = " + recoCross.palletsReko,
         },
+        ...(recoCross.fullPallets > 0 ? [
+          {
+            label: "Pełne palety SOS",
+            value: recoCross.fullPallets + " pal.",
+          },
+          {
+            label: "FTE (BX + pal.)",
+            value: recoCross.fteBx + " + " + recoCross.fteFP,
+          },
+        ] : []),
       ],
-      tooltip: ttSimple(
-        "Palety",
-        "Kartony CROSS &divide; 10 = palety po rekonstrukcji",
-        "0,342",
-        1193,
-      ),
+      tooltip: makeTooltip([
+        { name: "BX → palety po reko",    formula: "Kartony CROSS &divide; 10" },
+        { name: "Benchmark BX",               formula: "480 &times; 85% &divide; 0,342 &asymp; 1&nbsp;193 pal/os./zmianę" },
+        { name: "FTE_BX",                     formula: "Pal. reko &divide; 1&nbsp;193" },
+        { name: "Pełne palety SOS (ST2)", formula: "Z fallback SOS — bez sortowania" },
+        { name: "Benchmark pal. SOS",         formula: "480 &times; 85% &divide; 0,142 &asymp; 2&nbsp;873 pal/os./zmianę" },
+        { name: "FTE_pal.",                   formula: "Pełne palety &divide; 2&nbsp;873" },
+        { name: "FTE (wynik)",                formula: "FTE_BX + FTE_pal. = N,NN os." },
+        { name: "Ceil (zaokrąglone w górę)", formula: "&lceil; FTE &rceil; &mdash; minimalna obsada" },
+        { name: "Wykorz. zmiany",             formula: _TT_UTIL },
+      ]),
     }) +
     buildProcessCard({
       id: "foliaCross",
