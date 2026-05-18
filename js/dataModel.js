@@ -32,6 +32,7 @@ const SOS_FALLBACKS = {
   uk: { st: 37, st2: 0, ac2: 0 },
   unifam: { st: 0, st2: 23, ac2: 0 },
   francja: { st: 34, st2: 43, ac2: 3 },
+  dalpex: { st: 21, st2: 0, ac2: 0 },
 };
 
 /** Zwraca obiekt fallback dla danego SOS lub null gdy brak dopasowania. */
@@ -45,6 +46,7 @@ function getSosFallback(sos) {
   if (s.includes("unifam")) return SOS_FALLBACKS.unifam;
   if (s.includes("francj") || s.includes("france"))
     return SOS_FALLBACKS.francja;
+  if (s.includes("dalpex")) return SOS_FALLBACKS.dalpex;
   return null;
 }
 
