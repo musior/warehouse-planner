@@ -445,12 +445,31 @@ export function calcWstawianieDrobnicyPlac(drobnicalItemsPlac) {
  * Rekonstrukcja CROSS — bufor (Inbound, EffectiveArrival filled, !isDG).
  * Wejście: bxCrossRampa / 10 = palety po rekonstrukcji
  */
-export function calcRecoCrossRampa(bxCrossRampa) {
-  const paletReko  = bxCrossRampa / 10;
-  const result     = calcProcess(PROCESSES.recoCrossRampa, paletReko, 'palet po reko');
-  result.inputBoxes  = bxCrossRampa;
-  result.palletsReko = r(paletReko, 1);
-  return result;
+export function calcRecoCrossRampa(bxCrossRampa, fullPallets = 0) {
+  const paletReko = bxCrossRampa / 10;
+  const benchBx = SHIFT_MINUTES * PROCESSES.recoCrossRampa.productivity / PROCESSES.recoCrossRampa.minutesPerUnit;
+  const benchFP = SHIFT_MINUTES * PROCESSES.recoCrossFullPallet.productivity / PROCESSES.recoCrossFullPallet.minutesPerUnit;
+  const fteBx   = paletReko   / benchBx;
+  const fteFP   = fullPallets / benchFP;
+  const fteExact = fteBx + fteFP;
+  const peopleCeil = Math.ceil(fteExact);
+  return {
+    processId:      PROCESSES.recoCrossRampa.id,
+    label:          PROCESSES.recoCrossRampa.label,
+    unitCount:      r(paletReko + fullPallets, 1),
+    unitLabel:      'palet po reko',
+    minutesNeeded:  r(PROCESSES.recoCrossRampa.minutesPerUnit * paletReko +
+                      PROCESSES.recoCrossFullPallet.minutesPerUnit * fullPallets, 1),
+    peopleExact:    r(fteExact, 2),
+    peopleCeil,
+    unitsPerPerson: r(benchBx, 0),
+    utilizationPct: peopleCeil > 0 ? r((fteExact / peopleCeil) * 100, 1) : 0,
+    inputBoxes:     bxCrossRampa,
+    palletsReko:    r(paletReko, 1),
+    fullPallets,
+    fteBx:          r(fteBx, 3),
+    fteFP:          r(fteFP, 3),
+  };
 }
 
 /**
@@ -458,12 +477,31 @@ export function calcRecoCrossRampa(bxCrossRampa) {
  * Wejście: bxCrossPlac / 10 = palety po rekonstrukcji
  * Uwaga: DAX nie ma filtra FinishedScanDateTime dla reko plac (tylko dla sortowania).
  */
-export function calcRecoCrossPlac(bxCrossPlac) {
-  const paletReko  = bxCrossPlac / 10;
-  const result     = calcProcess(PROCESSES.recoCrossPlac, paletReko, 'palet po reko');
-  result.inputBoxes  = bxCrossPlac;
-  result.palletsReko = r(paletReko, 1);
-  return result;
+export function calcRecoCrossPlac(bxCrossPlac, fullPallets = 0) {
+  const paletReko = bxCrossPlac / 10;
+  const benchBx = SHIFT_MINUTES * PROCESSES.recoCrossPlac.productivity / PROCESSES.recoCrossPlac.minutesPerUnit;
+  const benchFP = SHIFT_MINUTES * PROCESSES.recoCrossFullPallet.productivity / PROCESSES.recoCrossFullPallet.minutesPerUnit;
+  const fteBx   = paletReko   / benchBx;
+  const fteFP   = fullPallets / benchFP;
+  const fteExact = fteBx + fteFP;
+  const peopleCeil = Math.ceil(fteExact);
+  return {
+    processId:      PROCESSES.recoCrossPlac.id,
+    label:          PROCESSES.recoCrossPlac.label,
+    unitCount:      r(paletReko + fullPallets, 1),
+    unitLabel:      'palet po reko',
+    minutesNeeded:  r(PROCESSES.recoCrossPlac.minutesPerUnit * paletReko +
+                      PROCESSES.recoCrossFullPallet.minutesPerUnit * fullPallets, 1),
+    peopleExact:    r(fteExact, 2),
+    peopleCeil,
+    unitsPerPerson: r(benchBx, 0),
+    utilizationPct: peopleCeil > 0 ? r((fteExact / peopleCeil) * 100, 1) : 0,
+    inputBoxes:     bxCrossPlac,
+    palletsReko:    r(paletReko, 1),
+    fullPallets,
+    fteBx:          r(fteBx, 3),
+    fteFP:          r(fteFP, 3),
+  };
 }
 
 export function calcFoliaCrossRampa(bxCrossRampa) {
@@ -505,8 +543,10 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
   const sortingPlac        = calcProcess(PROCESSES.sortingPlac,      kpi.sortPlacBoxes       || 0, 'kartonow');
   const sortingCrossRampa  = calcProcess(PROCESSES.sortingCrossRampa, kpi.sortCrossRampaBoxes || 0, 'kartonow');
   const sortingCrossPlac   = calcProcess(PROCESSES.sortingCrossPlac,  kpi.sortCrossPlacBoxes  || 0, 'kartonow');
-  const recoCrossRampa     = calcRecoCrossRampa(kpi.sortCrossRampaBoxes || 0);
-  const recoCrossPlac      = calcRecoCrossPlac (kpi.sortCrossPlacBoxes  || 0);
+  const crossFullPalletsRampa = (kpi.fallbackSosCrossPalletsRampa || 0) + (kpi.fallbackWroclawCrossRampa || 0);
+  const crossFullPalletsPlac  = (kpi.fallbackSosCrossPalletsPlac  || 0) + (kpi.fallbackWroclawCrossPlac  || 0);
+  const recoCrossRampa     = calcRecoCrossRampa(kpi.sortCrossRampaBoxes || 0, crossFullPalletsRampa);
+  const recoCrossPlac      = calcRecoCrossPlac (kpi.sortCrossPlacBoxes  || 0, crossFullPalletsPlac);
   const foliaCrossRampa    = calcFoliaCrossRampa(kpi.sortCrossRampaBoxes || 0);
   const foliaCrossPlac     = calcFoliaCrossPlac (kpi.sortCrossPlacBoxes  || 0);
   const przygowanieRampa = calcPrzygotowaniePaletRampa(
