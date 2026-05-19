@@ -50,6 +50,16 @@ function getSosFallback(sos) {
   return null;
 }
 
+/**
+ * Zwraca bucket procesu dla transportu bez SSCC na podstawie kolumny Celne shipmenty.
+ * "W drodze" (lub puste) → "inbound", "Rozładowany" → "rampa", "Na placu" → "plac".
+ */
+function celneStatusGroup(celneShipmenty) {
+  if (celneShipmenty === "Rozładowany") return "rampa";
+  if (celneShipmenty === "Na placu") return "plac";
+  return "inbound";
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // POMOCNICZA: znajdź najświeższą datę w awizacjach
 // ─────────────────────────────────────────────────────────────────────────────
@@ -175,6 +185,7 @@ export function buildModel({
       isCelne: awizacja.isCelne,
       isKontener: awizacja.isKontener,
       isKontenerManual: awizacja.isKontenerManual,
+      celneShipmenty: awizacja.celneShipmenty,
       carrier: firstRow?.carrier || "",
       businessShipper: firstRow?.businessShipper || "", // np. "DE Juechen EDC"
       licensePlate: firstRow?.licensePlate || "", // rejestracja z SSCC
@@ -237,7 +248,14 @@ function computeKpiFromData(
     (s, t) => s + t.pallets.total,
     0,
   );
-  const totalPalletsAll = trucks.reduce((s, t) => s + t.pallets.total, 0);
+  const totalPalletsAll = trucks.reduce((s, t) => {
+    // No-SSCC trucks już rozładowane / na placu nie wchodzą do rozładunku
+    if (t.status === "no-sscc") {
+      const cs = t.celneShipmenty || "";
+      if (cs === "Rozładowany" || cs === "Na placu") return s;
+    }
+    return s + t.pallets.total;
+  }, 0);
 
   const kontenerRegularRows = awizacjeOnDate.filter(
     (a) =>
@@ -328,29 +346,44 @@ function computeKpiFromData(
       activeSisSet.has(r.sisKey),
   ).length;
 
-  // Fallback: transporty Wrocław bez SSCC → doliczamy założone palety DG i CROSS
-  const wroclawNoSsccTrucks = trucksNoSscc.filter((t) => isSosWroclaw(t.sos));
-  const fallbackCrossPallets =
-    wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_CROSS_PALLETS;
-  const fallbackDgPallets =
-    wroclawNoSsccTrucks.length * WROCLAW_FALLBACK_DG_PALLETS;
+  // Fallback: transporty bez SSCC — split po kolumnie Celne shipmenty
+  // (tak jak kontenery: W drodze→inbound, Rozładowany→rampa, Na placu→plac)
+  const byGroup = (arr, g) =>
+    arr.filter((t) => celneStatusGroup(t.celneShipmenty) === g);
 
-  // Fallback: transporty SOS (Hiszp./Banska/UK/Unifam/Francja) bez SSCC
+  // Wrocław
+  const wroclawNoSsccTrucks = trucksNoSscc.filter((t) => isSosWroclaw(t.sos));
+  const wroclawInbound = byGroup(wroclawNoSsccTrucks, "inbound");
+  const wroclawRampa   = byGroup(wroclawNoSsccTrucks, "rampa");
+  const wroclawPlac    = byGroup(wroclawNoSsccTrucks, "plac");
+
+  const fallbackCrossPallets      = wroclawInbound.length * WROCLAW_FALLBACK_CROSS_PALLETS;
+  const fallbackDgPallets         = wroclawInbound.length * WROCLAW_FALLBACK_DG_PALLETS;
+  const fallbackWroclawDgRampa    = wroclawRampa.length   * WROCLAW_FALLBACK_DG_PALLETS;
+  const fallbackWroclawCrossRampa = wroclawRampa.length   * WROCLAW_FALLBACK_CROSS_PALLETS;
+  const fallbackWroclawDgPlac     = wroclawPlac.length    * WROCLAW_FALLBACK_DG_PALLETS;
+  const fallbackWroclawCrossPlac  = wroclawPlac.length    * WROCLAW_FALLBACK_CROSS_PALLETS;
+
+  // SOS (Hiszp./Banska/UK/Unifam/Francja/Dalpex/…)
   const sosFallbackTrucks = trucksNoSscc.filter(
     (t) => !isSosWroclaw(t.sos) && getSosFallback(t.sos),
   );
-  const fallbackSosDgPallets = sosFallbackTrucks.reduce(
-    (s, t) => s + (getSosFallback(t.sos)?.st || 0),
-    0,
-  );
-  const fallbackSosCrossPallets = sosFallbackTrucks.reduce(
-    (s, t) => s + (getSosFallback(t.sos)?.st2 || 0),
-    0,
-  );
-  const fallbackSosCrossCartons = sosFallbackTrucks.reduce(
-    (s, t) => s + (getSosFallback(t.sos)?.ac2 || 0),
-    0,
-  );
+  const sosInbound = byGroup(sosFallbackTrucks, "inbound");
+  const sosRampa   = byGroup(sosFallbackTrucks, "rampa");
+  const sosPlac    = byGroup(sosFallbackTrucks, "plac");
+
+  const sosSum = (arr, key) =>
+    arr.reduce((s, t) => s + (getSosFallback(t.sos)?.[key] || 0), 0);
+
+  const fallbackSosDgPallets          = sosSum(sosInbound, "st");
+  const fallbackSosCrossPallets       = sosSum(sosInbound, "st2");
+  const fallbackSosCrossCartons       = sosSum(sosInbound, "ac2");
+  const fallbackSosDgPalletsRampa     = sosSum(sosRampa,   "st");
+  const fallbackSosCrossPalletsRampa  = sosSum(sosRampa,   "st2");
+  const fallbackSosCrossCartonsRampa  = sosSum(sosRampa,   "ac2");
+  const fallbackSosDgPalletsPlac      = sosSum(sosPlac,    "st");
+  const fallbackSosCrossPalletsPlac   = sosSum(sosPlac,    "st2");
+  const fallbackSosCrossCartonsPlac   = sosSum(sosPlac,    "ac2");
 
   const sortingCrossBoxes = bxCrossFromSscc + fallbackSosCrossCartons;
 
@@ -390,22 +423,24 @@ function computeKpiFromData(
     .reduce((s, a) => s + a.ac + a.ac2, 0);
   const sortPlacBoxes = bxDgPlac + kontenerNaPlacu;
 
-  const sortCrossRampaBoxes = ssccInbound.filter(
-    (r) =>
-      r.packageTypeCode === "BX" &&
-      !r.isDG &&
-      r.shipper === DG_SHIPPER &&
-      r.effectiveArrival,
-  ).length;
+  const sortCrossRampaBoxes =
+    ssccInbound.filter(
+      (r) =>
+        r.packageTypeCode === "BX" &&
+        !r.isDG &&
+        r.shipper === DG_SHIPPER &&
+        r.effectiveArrival,
+    ).length + fallbackSosCrossCartonsRampa;
 
-  const sortCrossPlacBoxes = ssccOutbound.filter(
-    (r) =>
-      r.packageTypeCode === "BX" &&
-      !r.isDG &&
-      r.shipper === DG_SHIPPER &&
-      !r.taskCloseDate &&
-      !r.finishedScanDateTime,
-  ).length;
+  const sortCrossPlacBoxes =
+    ssccOutbound.filter(
+      (r) =>
+        r.packageTypeCode === "BX" &&
+        !r.isDG &&
+        r.shipper === DG_SHIPPER &&
+        !r.taskCloseDate &&
+        !r.finishedScanDateTime,
+    ).length + fallbackSosCrossCartonsPlac;
 
   const kontenerSt = kontenerRegularRows.reduce((s, a) => s + a.st + a.st2, 0);
 
@@ -454,13 +489,16 @@ function computeKpiFromData(
     else if (e.volume >= 0.1) over01volRampa++;
   }
   const paletyZ20KRampa = over01volRampa + over20Rampa;
-  const pelnePaletyDgRampa = ssccInbound.filter(
-    (r) =>
-      r.packageTypeCode !== "BX" &&
-      DG_DESTS.has(r.customerShipTo) &&
-      r.shipper === DG_SHIPPER &&
-      r.effectiveArrival,
-  ).length;
+  const pelnePaletyDgRampa =
+    ssccInbound.filter(
+      (r) =>
+        r.packageTypeCode !== "BX" &&
+        DG_DESTS.has(r.customerShipTo) &&
+        r.shipper === DG_SHIPPER &&
+        r.effectiveArrival,
+    ).length +
+    fallbackWroclawDgRampa +
+    fallbackSosDgPalletsRampa;
   const kontenerRozladowanyST = awizacje
     .filter(
       (a) =>
@@ -486,9 +524,12 @@ function computeKpiFromData(
     else if (e.volume >= 0.1) over01volPlac++;
   }
   const paletyZ20KPlac = over01volPlac + over20Plac;
-  const pelnePaletyDgPlac = ssccOutbound.filter(
-    (r) => r.packageTypeCode !== "BX" && r.isDG && !r.taskCloseDate,
-  ).length;
+  const pelnePaletyDgPlac =
+    ssccOutbound.filter(
+      (r) => r.packageTypeCode !== "BX" && r.isDG && !r.taskCloseDate,
+    ).length +
+    fallbackWroclawDgPlac +
+    fallbackSosDgPalletsPlac;
   const kontenerNaPlacu_ST = awizacje
     .filter(
       (a) =>
@@ -513,11 +554,21 @@ function computeKpiFromData(
     over20Items,
     paletyZ20K,
     pelnePaletyDg,
-    fallbackCrossPallets, // palety CROSS z transportów Wrocław bez SSCC
-    fallbackDgPallets, // palety DG z transportów Wrocław bez SSCC (już w pelnePaletyDg)
-    fallbackSosDgPallets, // palety DG z fallback SOS (już w pelnePaletyDg)
-    fallbackSosCrossPallets, // pełne palety CROSS z fallback SOS
-    fallbackSosCrossCartons, // kartony CROSS z fallback SOS (już w sortingCrossBoxes)
+    fallbackCrossPallets,         // palety CROSS Wrocław (W drodze)
+    fallbackDgPallets,            // palety DG Wrocław (W drodze, w pelnePaletyDg)
+    fallbackWroclawDgRampa,       // palety DG Wrocław (Rozładowany, w pelnePaletyDgRampa)
+    fallbackWroclawCrossRampa,    // palety CROSS Wrocław (Rozładowany)
+    fallbackWroclawDgPlac,        // palety DG Wrocław (Na placu, w pelnePaletyDgPlac)
+    fallbackWroclawCrossPlac,     // palety CROSS Wrocław (Na placu)
+    fallbackSosDgPallets,         // palety DG SOS (W drodze, w pelnePaletyDg)
+    fallbackSosCrossPallets,      // palety CROSS SOS (W drodze)
+    fallbackSosCrossCartons,      // kartony CROSS SOS (W drodze, w sortingCrossBoxes)
+    fallbackSosDgPalletsRampa,    // palety DG SOS (Rozładowany, w pelnePaletyDgRampa)
+    fallbackSosCrossPalletsRampa, // palety CROSS SOS (Rozładowany)
+    fallbackSosCrossCartonsRampa, // kartony CROSS SOS (Rozładowany, w sortCrossRampaBoxes)
+    fallbackSosDgPalletsPlac,     // palety DG SOS (Na placu, w pelnePaletyDgPlac)
+    fallbackSosCrossPalletsPlac,  // palety CROSS SOS (Na placu)
+    fallbackSosCrossCartonsPlac,  // kartony CROSS SOS (Na placu, w sortCrossPlacBoxes)
     kontenerSt,
     sortRampaBoxes,
     sortPlacBoxes,
