@@ -605,6 +605,13 @@ export function renderProcessesTab(
     wstawaniePlac,
     drobnicaRampa,
     drobnicaPlac,
+    sortingMagazynDg,
+    sortingCrossMagazyn,
+    przygowanieMagazyn,
+    wstawanieMagazyn,
+    drobnicaMagazyn,
+    recoCrossMagazyn,
+    foliaCrossMagazyn,
   } = staffing.processes;
 
   const crossFlowNote =
@@ -857,64 +864,56 @@ export function renderProcessesTab(
     '<span class="process-section-title">&#127979; Magazyn — DG</span>' +
     '<span class="process-section-total">' +
     r2(
-      +sortingRampa.peopleExact +
-        +sortingPlac.peopleExact +
-        +przygowanieRampa.peopleExact +
-        +przygowaniePlac.peopleExact +
-        +wstawanieRampa.peopleExact +
-        +wstawaniePlac.peopleExact +
-        +drobnicaRampa.peopleExact +
-        +drobnicaPlac.peopleExact,
+      +sortingMagazynDg.peopleExact +
+        +przygowanieMagazyn.peopleExact +
+        +wstawanieMagazyn.peopleExact +
+        +drobnicaMagazyn.peopleExact,
     ) +
     " os.</span>" +
     "</div>" +
     '<div class="process-cards">' +
     buildProcessCard({
-      id: "sortingRampa",
+      id: "sortingMagazynDg",
       icon: "&#128657;",
-      label: sortingRampa.label,
-      result: sortingRampa,
+      label: sortingMagazynDg.label,
+      result: sortingMagazynDg,
       color: "teal",
       extraRows: [
         {
-          label: "BX Inbound (EffArrival filled) + kont. Rozladowany",
-          value: staffing.sortRampaBoxes,
+          label: "BX magazyn (rampa + plac) + kont.",
+          value: staffing.sortMagazynDgBoxes,
         },
       ],
       tooltip: ttSimple(
         "Kartony",
-        "BX Inbound (EffArrival wypełniony) + kont. Rozładowany",
+        "BX Inbound (EffArrival filled) + BX Outbound (isDG) + kont.",
         "0,3467",
         1177,
       ),
     }) +
     buildProcessCard({
-      id: "przygowanieRampa",
+      id: "przygowanieMagazynDg",
       icon: "&#128218;",
-      label: przygowanieRampa.label,
-      result: przygowanieRampa,
+      label: przygowanieMagazyn.label,
+      result: przygowanieMagazyn,
       color: "teal",
       extraRows: [
         {
-          label: "Palety_z_20K rampa",
-          value: (staffing.przygowanieRampa || przygowanieRampa).paletyZ20K,
+          label: "Palety_z_20K magazyn",
+          value: przygowanieMagazyn.paletyZ20K,
         },
         {
-          label: "PE rampa + kont. Rozlad. ST",
-          value:
-            ((staffing.przygowanieRampa || przygowanieRampa).pelnePaletyDg ||
-              0) +
-            " + " +
-            ((staffing.przygowanieRampa || przygowanieRampa).kontenerST || 0),
+          label: "PE + kont. ST",
+          value: (przygowanieMagazyn.pelnePalety || 0) + " + " + (przygowanieMagazyn.kontenerST || 0),
         },
         {
           label: "FTE_20K + FTE_FP",
-          value: przygowanieRampa.fte20K + " + " + przygowanieRampa.fteFP,
+          value: przygowanieMagazyn.fte20K + " + " + przygowanieMagazyn.fteFP,
         },
       ],
       tooltip: ttTwoCompDiff(
-        "Palety_z_20K rampa",
-        "PE rampa + kont. Rozładowany ST",
+        "Palety_z_20K",
+        "PE magazyn + kont. ST",
         "1,56",
         261,
         "1,22",
@@ -922,148 +921,53 @@ export function renderProcessesTab(
       ),
     }) +
     buildProcessCard({
-      id: "wstawanieRampa",
+      id: "wstawanieMagazynDg",
       icon: "&#128230;",
-      label: wstawanieRampa.label,
-      result: wstawanieRampa,
+      label: wstawanieMagazyn.label,
+      result: wstawanieMagazyn,
       color: "teal",
       extraRows: [
-        { label: "Palety_z_20K rampa", value: wstawanieRampa.paletyZ20K },
+        { label: "Palety_z_20K magazyn", value: wstawanieMagazyn.paletyZ20K },
         {
-          label: "PE + kont.Rozlad.ST + manAC/54",
+          label: "PE + kont.ST + manAC/54",
           value:
-            (wstawanieRampa.pelnePaletyDg || 0) +
+            (wstawanieMagazyn.pelnePaletyDg || 0) +
             "+" +
-            (wstawanieRampa.kontenerRozladowanyST || 0) +
+            (wstawanieMagazyn.kontenerST || 0) +
             "+" +
-            (wstawanieRampa.manualPal || 0),
+            (wstawanieMagazyn.manualPal || 0),
         },
         {
           label: "FTE_20K + FTE_FP",
-          value: wstawanieRampa.fte20K + " + " + wstawanieRampa.fteFP,
+          value: wstawanieMagazyn.fte20K + " + " + wstawanieMagazyn.fteFP,
         },
       ],
       tooltip: ttTwoComp(
-        "Palety_z_20K rampa",
-        "PE rampa + kont.ST + kont.Manual AC&divide;54",
+        "Palety_z_20K",
+        "PE magazyn + kont.ST + kont.Manual AC&divide;54",
         "2,9073",
         140,
       ),
     }) +
     buildProcessCard({
-      id: "drobnicaRampa",
+      id: "drobnicaMagazynDg",
       icon: "&#128269;",
-      label: drobnicaRampa.label,
-      result: drobnicaRampa,
+      label: drobnicaMagazyn.label,
+      result: drobnicaMagazyn,
       color: "teal",
       extraRows: [
         {
-          label: "ATII (count<20, vol<0.1)",
-          value: drobnicaRampa.drobnicalItems,
+          label: "ATII magazyn (count<20, vol<0.1)",
+          value: drobnicaMagazyn.drobnicalItems,
         },
         {
-          label: "+ kont. Rozladowany AC",
-          value: drobnicaRampa.kontenerAC || 0,
+          label: "+ kont. AC",
+          value: drobnicaMagazyn.kontenerAC || 0,
         },
       ],
       tooltip: ttSimple(
         "Poz. ATII",
-        "ATII Inbound (count&lt;20, vol&lt;0.1) + kont. Rozładowany AC",
-        "0,44",
-        927,
-      ),
-    }) +
-    buildProcessCard({
-      id: "sortingPlac",
-      icon: "&#128202;",
-      label: sortingPlac.label,
-      result: sortingPlac,
-      color: "indigo",
-      extraRows: [
-        {
-          label: "BX Outbound (isDG, TaskClose blank) + kont. Na placu",
-          value: staffing.sortPlacBoxes,
-        },
-      ],
-      tooltip: ttSimple(
-        "Kartony",
-        "BX Outbound (isDG, TaskClose blank) + kont. Na placu",
-        "0,3467",
-        1177,
-      ),
-      tooltipFlip: true,
-    }) +
-    buildProcessCard({
-      id: "przygowaniePlac",
-      icon: "&#128218;",
-      label: przygowaniePlac.label,
-      result: przygowaniePlac,
-      color: "indigo",
-      extraRows: [
-        { label: "Palety_z_20K plac", value: przygowaniePlac.paletyZ20K },
-        {
-          label: "PE plac + kont. Na placu ST",
-          value:
-            (przygowaniePlac.pelnePalety || 0) +
-            " + " +
-            (przygowaniePlac.kontenerST || 0),
-        },
-        {
-          label: "FTE_20K + FTE_FP",
-          value: przygowaniePlac.fte20K + " + " + przygowaniePlac.fteFP,
-        },
-      ],
-      tooltip: ttTwoCompDiff(
-        "Palety_z_20K plac",
-        "PE plac + kont. Na placu ST",
-        "1,56",
-        261,
-        "1,22",
-        334,
-      ),
-    }) +
-    buildProcessCard({
-      id: "wstawaniePlac",
-      icon: "&#128230;",
-      label: wstawaniePlac.label,
-      result: wstawaniePlac,
-      color: "indigo",
-      extraRows: [
-        { label: "Palety_z_20K plac", value: wstawaniePlac.paletyZ20K },
-        {
-          label: "PE plac + kont. Na placu ST",
-          value:
-            (wstawaniePlac.pelnePalety || 0) +
-            " + " +
-            (wstawaniePlac.kontenerNaPlacu_ST || 0),
-        },
-        {
-          label: "FTE_20K + FTE_FP",
-          value: wstawaniePlac.fte20K + " + " + wstawaniePlac.fteFP,
-        },
-      ],
-      tooltip: ttTwoComp(
-        "Palety_z_20K plac",
-        "PE plac + kont. Na placu ST",
-        "2,9073",
-        140,
-      ),
-    }) +
-    buildProcessCard({
-      id: "drobnicaPlac",
-      icon: "&#128269;",
-      label: drobnicaPlac.label,
-      result: drobnicaPlac,
-      color: "indigo",
-      extraRows: [
-        {
-          label: "ATII Outbound (count<20, vol<0.1)",
-          value: drobnicaPlac.drobnicalItems,
-        },
-      ],
-      tooltip: ttSimple(
-        "Poz. ATII",
-        "ATII Outbound (count&lt;20, vol&lt;0.1, isDG, TaskClose blank)",
+        "ATII magazyn (count&lt;20, vol&lt;0.1) + kont. AC",
         "0,44",
         927,
       ),
@@ -1074,139 +978,75 @@ export function renderProcessesTab(
     '<span class="process-section-title">&#127979; Magazyn — CROSS</span>' +
     '<span class="process-section-total">' +
     r2(
-      +sortingCrossRampa.peopleExact +
-        +sortingCrossPlac.peopleExact +
-        +recoCrossRampa.peopleExact +
-        +recoCrossPlac.peopleExact +
-        +foliaCrossRampa.peopleExact +
-        +foliaCrossPlac.peopleExact,
+      +sortingCrossMagazyn.peopleExact +
+        +recoCrossMagazyn.peopleExact +
+        +foliaCrossMagazyn.peopleExact,
     ) +
     " os.</span>" +
     "</div>" +
     '<div class="process-cards">' +
     buildProcessCard({
-      id: "sortingCrossRampa",
+      id: "sortingCrossMagazyn",
       icon: "&#8635;",
-      label: sortingCrossRampa.label,
-      result: sortingCrossRampa,
+      label: sortingCrossMagazyn.label,
+      result: sortingCrossMagazyn,
       color: "purple",
       extraRows: [
         {
-          label: "BX Inbound (EffArrival filled, !isDG, 3M)",
-          value: staffing.sortCrossRampaBoxes,
+          label: "BX magazyn (bufor + plac)",
+          value: staffing.sortCrossMagazynBoxes,
         },
       ],
       tooltip: ttSimple(
         "Kartony",
-        "BX Inbound (EffArrival filled, !isDG, Shipper=3M)",
+        "BX Inbound (EffArrival filled, !isDG) + BX Outbound (!isDG)",
         "0,3724",
         1096,
       ),
     }) +
     buildProcessCard({
-      id: "sortingCrossPlac",
-      icon: "&#8635;",
-      label: sortingCrossPlac.label,
-      result: sortingCrossPlac,
-      color: "purple",
-      extraRows: [
-        {
-          label: "BX Outbound (!isDG, TaskClose blank, Finished blank)",
-          value: staffing.sortCrossPlacBoxes,
-        },
-      ],
-      tooltip: ttSimple(
-        "Kartony",
-        "BX Outbound (!isDG, TaskClose blank, FinishedScan blank)",
-        "0,3724",
-        1096,
-      ),
-    }) +
-    buildProcessCard({
-      id: "recoCrossRampa",
+      id: "recoCrossMagazyn",
       icon: "&#128260;",
-      label: recoCrossRampa.label,
-      result: recoCrossRampa,
+      label: recoCrossMagazyn.label,
+      result: recoCrossMagazyn,
       color: "teal",
       extraRows: [
         {
-          label: "BX bufor ÷ 10",
-          value:
-            (staffing.sortCrossRampaBoxes || 0) +
-            " ÷ 10 = " +
-            recoCrossRampa.palletsReko,
+          label: "BX magazyn ÷ 10",
+          value: recoCrossMagazyn.inputBoxes + " ÷ 10 = " + recoCrossMagazyn.palletsReko,
         },
+        ...(recoCrossMagazyn.fullPallets > 0 ? [
+          { label: "Pełne palety SOS", value: recoCrossMagazyn.fullPallets + " pal." },
+          { label: "FTE (BX + pal.)",  value: recoCrossMagazyn.fteBx + " + " + recoCrossMagazyn.fteFP },
+        ] : []),
       ],
-      tooltip: ttSimple(
-        "Palety",
-        "BX bufor &divide; 10 = palety po rekonstrukcji",
-        "0,342",
-        1193,
-      ),
+      tooltip: makeTooltip([
+        { name: "BX → palety po reko",    formula: "Kartony CROSS magazyn &divide; 10" },
+        { name: "Benchmark BX",           formula: "480 &times; 85% &divide; 0,342 &asymp; 1&nbsp;193 pal/os./zmianę" },
+        { name: "FTE_BX",                 formula: "Pal. reko &divide; 1&nbsp;193" },
+        { name: "Pełne palety SOS (ST2)", formula: "Z fallback SOS — bez sortowania" },
+        { name: "Benchmark pal. SOS",     formula: "480 &times; 85% &divide; 0,142 &asymp; 2&nbsp;873 pal/os./zmianę" },
+        { name: "FTE_pal.",               formula: "Pełne palety &divide; 2&nbsp;873" },
+        { name: "FTE (wynik)",            formula: "FTE_BX + FTE_pal. = N,NN os." },
+        { name: "Ceil (zaokrąglone w górę)", formula: "&lceil; FTE &rceil; &mdash; minimalna obsada" },
+        { name: "Wykorz. zmiany",         formula: _TT_UTIL },
+      ]),
     }) +
     buildProcessCard({
-      id: "recoCrossPlac",
-      icon: "&#128260;",
-      label: recoCrossPlac.label,
-      result: recoCrossPlac,
-      color: "purple",
-      extraRows: [
-        {
-          label: "BX plac ÷ 10",
-          value:
-            (staffing.sortCrossPlacBoxes || 0) +
-            " ÷ 10 = " +
-            recoCrossPlac.palletsReko,
-        },
-      ],
-      tooltip: ttSimple(
-        "Palety",
-        "BX plac &divide; 10 = palety po rekonstrukcji",
-        "0,342",
-        1193,
-      ),
-    }) +
-    buildProcessCard({
-      id: "foliaCrossRampa",
+      id: "foliaCrossMagazyn",
       icon: "&#127973;",
-      label: foliaCrossRampa.label,
-      result: foliaCrossRampa,
-      color: "teal",
+      label: foliaCrossMagazyn.label,
+      result: foliaCrossMagazyn,
+      color: "indigo",
       extraRows: [
         {
           label: "Pal. reko × 0.75",
-          value:
-            foliaCrossRampa.palletsReko +
-            " × 0.75 = " +
-            foliaCrossRampa.palletsFolia,
+          value: foliaCrossMagazyn.palletsReko + " × 0.75 = " + foliaCrossMagazyn.palletsFolia,
         },
       ],
       tooltip: ttSimple(
         "Palety",
-        "(BX bufor &divide; 10) &times; 0,75 = palety do folii",
-        "3,49",
-        117,
-      ),
-      tooltipFlip: true,
-    }) +
-    buildProcessCard({
-      id: "foliaCrossPlac",
-      icon: "&#127973;",
-      label: foliaCrossPlac.label,
-      result: foliaCrossPlac,
-      color: "purple",
-      extraRows: [
-        {
-          label: "Pal. reko × 0.75",
-          value:
-            foliaCrossPlac.palletsReko +
-            " × 0.75 = " +
-            foliaCrossPlac.palletsFolia,
-        },
-      ],
-      tooltip: ttSimple(
-        "Palety",
-        "(BX plac &divide; 10) &times; 0,75 = palety do folii",
+        "(BX magazyn &divide; 10) &times; 0,75 = palety do folii",
         "3,49",
         117,
       ),
