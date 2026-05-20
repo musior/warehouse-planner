@@ -190,6 +190,22 @@ function calcProcess(procDef, unitCount, unitLabel = 'kartonów') {
   };
 }
 
+function mergeProcess(r1, r2, newId, newLabel) {
+  const combined  = r1.peopleExact + r2.peopleExact;
+  const peopleCeil = Math.ceil(combined);
+  return {
+    processId:      newId,
+    label:          newLabel,
+    unitCount:      r(r1.unitCount + r2.unitCount, 1),
+    unitLabel:      r1.unitLabel,
+    minutesNeeded:  r(r1.minutesNeeded + r2.minutesNeeded, 1),
+    peopleExact:    r(combined, 2),
+    peopleCeil,
+    unitsPerPerson: r1.unitsPerPerson,
+    utilizationPct: peopleCeil > 0 ? r((combined / peopleCeil) * 100, 1) : 0,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FUNKCJE PUBLICZNE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -576,6 +592,43 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
   );
   const drobnicaPlac         = calcWstawianieDrobnicyPlac(kpi.drobnicalItemsPlac || 0);
 
+  // ── Scalone procesy magazynowe (rampa + plac → magazyn) ────────────────────
+  const sortingMagazynDg = mergeProcess(sortingRampa, sortingPlac, 'sortingMagazynDg', 'Sortowanie — magazyn DG');
+
+  const sortingCrossMagazyn = mergeProcess(sortingCrossRampa, sortingCrossPlac, 'sortingCrossMagazyn', 'Sortowanie CROSS — magazyn');
+
+  const przygowanieMagazyn = mergeProcess(przygowanieRampa, przygowaniePlac, 'przygowanieMagazynDg', 'Przygotowanie palet — magazyn DG');
+  przygowanieMagazyn.paletyZ20K  = (przygowanieRampa.paletyZ20K    || 0) + (przygowaniePlac.paletyZ20K  || 0);
+  przygowanieMagazyn.pelnePalety = (przygowanieRampa.pelnePaletyDg || 0) + (przygowaniePlac.pelnePalety || 0);
+  przygowanieMagazyn.kontenerST  = (przygowanieRampa.kontenerST    || 0) + (przygowaniePlac.kontenerST  || 0);
+  przygowanieMagazyn.fte20K = r((przygowanieRampa.fte20K || 0) + (przygowaniePlac.fte20K || 0), 3);
+  przygowanieMagazyn.fteFP  = r((przygowanieRampa.fteFP  || 0) + (przygowaniePlac.fteFP  || 0), 3);
+
+  const wstawanieMagazyn = mergeProcess(wstawanieRampa, wstawaniePlac, 'wstawanieMagazynDg', 'Wstawianie palet — magazyn DG');
+  wstawanieMagazyn.paletyZ20K       = (wstawanieRampa.paletyZ20K            || 0) + (wstawaniePlac.paletyZ20K          || 0);
+  wstawanieMagazyn.pelnePaletyDg    = (wstawanieRampa.pelnePaletyDg         || 0) + (wstawaniePlac.pelnePalety         || 0);
+  wstawanieMagazyn.kontenerST       = (wstawanieRampa.kontenerRozladowanyST || 0) + (wstawaniePlac.kontenerNaPlacu_ST  || 0);
+  wstawanieMagazyn.kontenerManualAC = wstawanieRampa.kontenerManualAC || 0;
+  wstawanieMagazyn.manualPal        = wstawanieRampa.manualPal        || 0;
+  wstawanieMagazyn.fte20K = r((wstawanieRampa.fte20K || 0) + (wstawaniePlac.fte20K || 0), 3);
+  wstawanieMagazyn.fteFP  = r((wstawanieRampa.fteFP  || 0) + (wstawaniePlac.fteFP  || 0), 3);
+
+  const drobnicaMagazyn = mergeProcess(drobnicaRampa, drobnicaPlac, 'drobnicaMagazynDg', 'Wstawianie drobnicy — magazyn DG');
+  drobnicaMagazyn.drobnicalItems = (drobnicaRampa.drobnicalItems || 0) + (drobnicaPlac.drobnicalItems || 0);
+  drobnicaMagazyn.kontenerAC     = drobnicaRampa.kontenerAC || 0;
+
+  const recoCrossMagazyn = mergeProcess(recoCrossRampa, recoCrossPlac, 'recoCrossMagazyn', 'Rekonstrukcja CROSS — magazyn');
+  recoCrossMagazyn.inputBoxes  = (recoCrossRampa.inputBoxes  || 0) + (recoCrossPlac.inputBoxes  || 0);
+  recoCrossMagazyn.palletsReko = r((recoCrossRampa.palletsReko || 0) + (recoCrossPlac.palletsReko || 0), 1);
+  recoCrossMagazyn.fullPallets = (recoCrossRampa.fullPallets || 0) + (recoCrossPlac.fullPallets || 0);
+  recoCrossMagazyn.fteBx = r((recoCrossRampa.fteBx || 0) + (recoCrossPlac.fteBx || 0), 3);
+  recoCrossMagazyn.fteFP = r((recoCrossRampa.fteFP || 0) + (recoCrossPlac.fteFP || 0), 3);
+
+  const foliaCrossMagazyn = mergeProcess(foliaCrossRampa, foliaCrossPlac, 'foliaCrossMagazyn', 'Foliowanie CROSS — magazyn');
+  foliaCrossMagazyn.inputBoxes   = (foliaCrossRampa.inputBoxes   || 0) + (foliaCrossPlac.inputBoxes   || 0);
+  foliaCrossMagazyn.palletsReko  = r((foliaCrossRampa.palletsReko  || 0) + (foliaCrossPlac.palletsReko  || 0), 1);
+  foliaCrossMagazyn.palletsFolia = r((foliaCrossRampa.palletsFolia || 0) + (foliaCrossPlac.palletsFolia || 0), 1);
+
   const totalInbound =
     unloading.peopleExact + manualContainer.peopleExact +
     sortingDg.peopleExact + drobnical.peopleExact +
@@ -602,10 +655,12 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
     crossBoxes:        bxCross,
     crossPalletsReko:  r(bxCross / 10,        1),
     crossPalletsFolia: r(bxCross / 10 * 0.75, 1),
-    sortRampaBoxes:      kpi.sortRampaBoxes        || 0,
-    sortPlacBoxes:       kpi.sortPlacBoxes         || 0,
-    sortCrossRampaBoxes: kpi.sortCrossRampaBoxes   || 0,
-    sortCrossPlacBoxes:  kpi.sortCrossPlacBoxes    || 0,
+    sortRampaBoxes:        kpi.sortRampaBoxes        || 0,
+    sortPlacBoxes:         kpi.sortPlacBoxes         || 0,
+    sortCrossRampaBoxes:   kpi.sortCrossRampaBoxes   || 0,
+    sortCrossPlacBoxes:    kpi.sortCrossPlacBoxes    || 0,
+    sortMagazynDgBoxes:    (kpi.sortRampaBoxes      || 0) + (kpi.sortPlacBoxes      || 0),
+    sortCrossMagazynBoxes: (kpi.sortCrossRampaBoxes || 0) + (kpi.sortCrossPlacBoxes || 0),
     przygowanieRampa, przygowaniePlac,
     wstawanieRampa, wstawaniePlac,
     drobnicaRampa, drobnicaPlac,
@@ -620,6 +675,9 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
       przygowanieRampa, przygowaniePlac,
       wstawanieRampa, wstawaniePlac,
       drobnicaRampa, drobnicaPlac,
+      sortingMagazynDg, sortingCrossMagazyn,
+      przygowanieMagazyn, wstawanieMagazyn, drobnicaMagazyn,
+      recoCrossMagazyn, foliaCrossMagazyn,
     },
     totalPeople:  r(totalInbound + totalMagazyn, 2),
     totalInbound: r(totalInbound, 2),
