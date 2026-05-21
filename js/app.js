@@ -6,7 +6,8 @@ import { parseSSCCCsv, parseSSCCOutboundCsv, parseAwizacjeXlsx,
          SSCC_INBOUND_FILENAME_PREFIX, SSCC_OUTBOUND_FILENAME_PREFIX } from './parsers.js';
 import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataModel.js';
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
-         renderProcessesTab, renderTimesTab, updateFileStatus, updateSlotUI } from './ui.js';
+         renderProcessesTab, renderTimesTab, renderStaffingTab,
+         updateFileStatus, updateSlotUI } from './ui.js';
 import { tomorrow, today, formatDate, isSameDay } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
 
@@ -90,6 +91,7 @@ function recomputeProcessesForSelection() {
   });
   const staffing = calcAllProcesses(kpi);
   renderProcessesTab(staffing, state.model.trucks, state.selectedSisSet);
+  renderStaffingTab(staffing);
 
   // Przywróć stan indeterminate po ponownym renderze
   if (state.selectedSisSet !== null && state.selectedSisSet.size > 0) {
@@ -462,6 +464,7 @@ function tryRebuildModel() {
     renderAwizacjeTable(state.awizacje || [], state.filterDateFrom, state.filterDateTo);
     renderSsccTable(state.ssccInbound || []);
     renderProcessesTab(state.staffing, state.model.trucks, null);
+    renderStaffingTab(state.staffing);
     updateDataSummary();
   } catch (err) {
     console.error(err);
