@@ -1597,6 +1597,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  align-items: center;
 }
 
 .staffing-total-row {
@@ -1619,11 +1620,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 300px;
+  align-items: center;
 }
 
-.staffing-fte-hero.fte-green { background: var(--green-bg); border-color: var(--green); }
-.staffing-fte-hero.fte-amber { background: var(--amber-bg); border-color: var(--amber); }
-.staffing-fte-hero.fte-red   { background: var(--red-bg);   border-color: var(--red);   }
+.staffing-fte-hero.fte-green {
+  border-top: 3px solid var(--green);
+}
+.staffing-fte-hero.fte-amber {
+  border-top: 3px solid var(--amber);
+}
+.staffing-fte-hero.fte-red {
+  border-top: 3px solid var(--red);
+}
 
 .staffing-fte-hero-label {
   font-size: 11px;
@@ -1632,9 +1641,15 @@ body {
   letter-spacing: 0.5px;
   color: var(--text-2);
 }
-.staffing-fte-hero.fte-green .staffing-fte-hero-label { color: var(--green); }
-.staffing-fte-hero.fte-amber .staffing-fte-hero-label { color: var(--amber); }
-.staffing-fte-hero.fte-red   .staffing-fte-hero-label { color: var(--red);   }
+.staffing-fte-hero.fte-green .staffing-fte-hero-label {
+  color: var(--green);
+}
+.staffing-fte-hero.fte-amber .staffing-fte-hero-label {
+  color: var(--amber);
+}
+.staffing-fte-hero.fte-red .staffing-fte-hero-label {
+  color: var(--red);
+}
 
 .staffing-fte-hero-value {
   font-size: 72px;
@@ -1642,17 +1657,32 @@ body {
   line-height: 1;
   color: var(--text-1);
 }
-.staffing-fte-hero.fte-green .staffing-fte-hero-value { color: var(--green); }
-.staffing-fte-hero.fte-amber .staffing-fte-hero-value { color: var(--amber); }
-.staffing-fte-hero.fte-red   .staffing-fte-hero-value { color: var(--red);   }
+.staffing-fte-hero.fte-green .staffing-fte-hero-value {
+  color: var(--green);
+}
+.staffing-fte-hero.fte-amber .staffing-fte-hero-value {
+  color: var(--amber);
+}
+.staffing-fte-hero.fte-red .staffing-fte-hero-value {
+  color: var(--red);
+}
 
 .staffing-fte-hero-sub {
   font-size: 12px;
   color: var(--text-3);
 }
-.staffing-fte-hero.fte-green .staffing-fte-hero-sub { color: var(--green); opacity: 0.75; }
-.staffing-fte-hero.fte-amber .staffing-fte-hero-sub { color: var(--amber); opacity: 0.75; }
-.staffing-fte-hero.fte-red   .staffing-fte-hero-sub { color: var(--red);   opacity: 0.75; }
+.staffing-fte-hero.fte-green .staffing-fte-hero-sub {
+  color: var(--green);
+  opacity: 0.75;
+}
+.staffing-fte-hero.fte-amber .staffing-fte-hero-sub {
+  color: var(--amber);
+  opacity: 0.75;
+}
+.staffing-fte-hero.fte-red .staffing-fte-hero-sub {
+  color: var(--red);
+  opacity: 0.75;
+}
 
 /* ── FTE Secondary Cards (Inbound / Magazyn) ────────────────────────────── */
 .staffing-fte-card {
@@ -1663,10 +1693,16 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 200px;
+  align-items: center;
 }
 
-.staffing-inbound { background: var(--blue-bg);  border-color: var(--blue);  }
-.staffing-magazyn  { background: var(--green-bg); border-color: var(--green); }
+.staffing-inbound {
+  border-top: 3px solid var(--blue);
+}
+.staffing-magazyn {
+  border-top: 3px solid var(--green);
+}
 
 .staffing-fte-label {
   font-size: 11px;
@@ -1674,8 +1710,12 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.staffing-inbound .staffing-fte-label { color: var(--blue);  }
-.staffing-magazyn  .staffing-fte-label { color: var(--green); }
+.staffing-inbound .staffing-fte-label {
+  color: var(--blue);
+}
+.staffing-magazyn .staffing-fte-label {
+  color: var(--green);
+}
 
 .staffing-fte-value {
   font-size: 52px;
@@ -1683,15 +1723,23 @@ body {
   line-height: 1;
   color: var(--text-1);
 }
-.staffing-inbound .staffing-fte-value { color: var(--blue);  }
-.staffing-magazyn  .staffing-fte-value { color: var(--green); }
+.staffing-inbound .staffing-fte-value {
+  color: var(--blue);
+}
+.staffing-magazyn .staffing-fte-value {
+  color: var(--green);
+}
 
 .staffing-fte-sub {
   font-size: 11px;
   opacity: 0.75;
 }
-.staffing-inbound .staffing-fte-sub { color: var(--blue);  }
-.staffing-magazyn  .staffing-fte-sub { color: var(--green); }
+.staffing-inbound .staffing-fte-sub {
+  color: var(--blue);
+}
+.staffing-magazyn .staffing-fte-sub {
+  color: var(--green);
+}
 
 /* ── Volume Cards ────────────────────────────────────────────────────────── */
 .staffing-vol-row {
@@ -1741,9 +1789,13 @@ body {
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .staffing-vol-row { grid-template-columns: repeat(3, 1fr); }
+  .staffing-vol-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 600px) {
-  .staffing-vol-row { grid-template-columns: repeat(2, 1fr); }
+  .staffing-vol-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
