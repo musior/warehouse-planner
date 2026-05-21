@@ -1382,10 +1382,6 @@ export function renderStaffingTab(staffing) {
     return;
   }
 
-  const totalCeil   = Math.ceil(staffing.totalPeople);
-  const inboundCeil = Math.ceil(staffing.totalInbound);
-  const magazynCeil = Math.ceil(staffing.totalMagazyn);
-
   function fteColorClass(exact) {
     if (exact < 10) return 'fte-green';
     if (exact < 20) return 'fte-amber';
@@ -1414,20 +1410,17 @@ export function renderStaffingTab(staffing) {
     '<div class="staffing-total-row">' +
       '<div class="staffing-fte-hero' + (colorCls ? ' ' + colorCls : '') + '">' +
         '<div class="staffing-fte-hero-label">FTE Total</div>' +
-        '<div class="staffing-fte-hero-value">' + totalCeil + '</div>' +
-        '<div class="staffing-fte-hero-sub">dokładnie ' + staffing.totalPeople + ' FTE</div>' +
+        '<div class="staffing-fte-hero-value">' + staffing.totalPeople + '</div>' +
       '</div>' +
     '</div>' +
     '<div class="staffing-fte-row">' +
       '<div class="staffing-fte-card staffing-inbound">' +
         '<div class="staffing-fte-label">FTE Inbound</div>' +
-        '<div class="staffing-fte-value">' + inboundCeil + '</div>' +
-        '<div class="staffing-fte-sub">' + staffing.totalInbound + ' FTE</div>' +
+        '<div class="staffing-fte-value">' + staffing.totalInbound + '</div>' +
       '</div>' +
       '<div class="staffing-fte-card staffing-magazyn">' +
         '<div class="staffing-fte-label">FTE Magazyn</div>' +
-        '<div class="staffing-fte-value">' + magazynCeil + '</div>' +
-        '<div class="staffing-fte-sub">' + staffing.totalMagazyn + ' FTE</div>' +
+        '<div class="staffing-fte-value">' + staffing.totalMagazyn + '</div>' +
       '</div>' +
     '</div>' +
     '<div class="staffing-vol-row">' +
