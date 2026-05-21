@@ -1367,6 +1367,71 @@ function buildProcessCardPlaceholder(label) {
 // ZAKŁADKA: CZASY
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PLANOWANIE LUDZI
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function renderStaffingTab(staffing) {
+  const wrap = document.getElementById('staffing-content');
+  if (!wrap) return;
+
+  if (!staffing) {
+    wrap.innerHTML =
+      '<div class="empty-state"><div class="empty-icon">&#128101;</div>' +
+      '<div class="empty-text">Wczytaj dane aby zobaczyć planowanie</div></div>';
+    return;
+  }
+
+  function fteColorClass(exact) {
+    if (exact < 10) return 'fte-green';
+    if (exact < 20) return 'fte-amber';
+    if (exact <= 30) return '';
+    return 'fte-red';
+  }
+
+  function fmtNum(v) {
+    return (v || 0).toLocaleString('pl-PL');
+  }
+
+  function volCard(label, value, unit, sub) {
+    return (
+      '<div class="staffing-vol-card">' +
+        '<div class="staffing-vol-label">' + esc(label) + '</div>' +
+        '<div class="staffing-vol-value">' + fmtNum(value) + '</div>' +
+        '<div class="staffing-vol-unit">' + esc(unit) + '</div>' +
+        '<div class="staffing-vol-sub">' + esc(sub) + '</div>' +
+      '</div>'
+    );
+  }
+
+  const colorCls = fteColorClass(staffing.totalPeople);
+
+  wrap.innerHTML =
+    '<div class="staffing-total-row">' +
+      '<div class="staffing-fte-hero' + (colorCls ? ' ' + colorCls : '') + '">' +
+        '<div class="staffing-fte-hero-label">FTE Total</div>' +
+        '<div class="staffing-fte-hero-value">' + staffing.totalPeople + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="staffing-fte-row">' +
+      '<div class="staffing-fte-card staffing-inbound">' +
+        '<div class="staffing-fte-label">FTE Inbound</div>' +
+        '<div class="staffing-fte-value">' + staffing.totalInbound + '</div>' +
+      '</div>' +
+      '<div class="staffing-fte-card staffing-magazyn">' +
+        '<div class="staffing-fte-label">FTE Magazyn</div>' +
+        '<div class="staffing-fte-value">' + staffing.totalMagazyn + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="staffing-vol-row">' +
+      volCard('Palety do rozładunku', staffing.unloadingPallets,      'palet',    'Inbound') +
+      volCard('Kartony DG',           staffing.dgBoxes,               'kartonów', 'Inbound — do sortowania') +
+      volCard('Kartony CROSS',        staffing.crossBoxes,            'kartonów', 'Inbound — do sortowania') +
+      volCard('Kartony DG',           staffing.sortMagazynDgBoxes,    'kartonów', 'Magazyn — rampa + plac') +
+      volCard('Kartony CROSS',        staffing.sortCrossMagazynBoxes, 'kartonów', 'Magazyn — rampa + plac') +
+    '</div>';
+}
+
 export function renderTimesTab() {
   const wrap = document.getElementById("times-content");
   if (!wrap) return;

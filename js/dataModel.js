@@ -33,6 +33,7 @@ const SOS_FALLBACKS = {
   unifam: { st: 0, st2: 23, ac2: 0 },
   francja: { st: 34, st2: 43, ac2: 3 },
   dalpex: { st: 21, st2: 0, ac2: 0 },
+  armes: { st: 18, st2: 0, ac2: 0 },
 };
 
 /** Zwraca obiekt fallback dla danego SOS lub null gdy brak dopasowania. */
@@ -354,36 +355,41 @@ function computeKpiFromData(
   // Wrocław
   const wroclawNoSsccTrucks = trucksNoSscc.filter((t) => isSosWroclaw(t.sos));
   const wroclawInbound = byGroup(wroclawNoSsccTrucks, "inbound");
-  const wroclawRampa   = byGroup(wroclawNoSsccTrucks, "rampa");
-  const wroclawPlac    = byGroup(wroclawNoSsccTrucks, "plac");
+  const wroclawRampa = byGroup(wroclawNoSsccTrucks, "rampa");
+  const wroclawPlac = byGroup(wroclawNoSsccTrucks, "plac");
 
-  const fallbackCrossPallets      = wroclawInbound.length * WROCLAW_FALLBACK_CROSS_PALLETS;
-  const fallbackDgPallets         = wroclawInbound.length * WROCLAW_FALLBACK_DG_PALLETS;
-  const fallbackWroclawDgRampa    = wroclawRampa.length   * WROCLAW_FALLBACK_DG_PALLETS;
-  const fallbackWroclawCrossRampa = wroclawRampa.length   * WROCLAW_FALLBACK_CROSS_PALLETS;
-  const fallbackWroclawDgPlac     = wroclawPlac.length    * WROCLAW_FALLBACK_DG_PALLETS;
-  const fallbackWroclawCrossPlac  = wroclawPlac.length    * WROCLAW_FALLBACK_CROSS_PALLETS;
+  const fallbackCrossPallets =
+    wroclawInbound.length * WROCLAW_FALLBACK_CROSS_PALLETS;
+  const fallbackDgPallets = wroclawInbound.length * WROCLAW_FALLBACK_DG_PALLETS;
+  const fallbackWroclawDgRampa =
+    wroclawRampa.length * WROCLAW_FALLBACK_DG_PALLETS;
+  const fallbackWroclawCrossRampa =
+    wroclawRampa.length * WROCLAW_FALLBACK_CROSS_PALLETS;
+  const fallbackWroclawDgPlac =
+    wroclawPlac.length * WROCLAW_FALLBACK_DG_PALLETS;
+  const fallbackWroclawCrossPlac =
+    wroclawPlac.length * WROCLAW_FALLBACK_CROSS_PALLETS;
 
   // SOS (Hiszp./Banska/UK/Unifam/Francja/Dalpex/…)
   const sosFallbackTrucks = trucksNoSscc.filter(
     (t) => !isSosWroclaw(t.sos) && getSosFallback(t.sos),
   );
   const sosInbound = byGroup(sosFallbackTrucks, "inbound");
-  const sosRampa   = byGroup(sosFallbackTrucks, "rampa");
-  const sosPlac    = byGroup(sosFallbackTrucks, "plac");
+  const sosRampa = byGroup(sosFallbackTrucks, "rampa");
+  const sosPlac = byGroup(sosFallbackTrucks, "plac");
 
   const sosSum = (arr, key) =>
     arr.reduce((s, t) => s + (getSosFallback(t.sos)?.[key] || 0), 0);
 
-  const fallbackSosDgPallets          = sosSum(sosInbound, "st");
-  const fallbackSosCrossPallets       = sosSum(sosInbound, "st2");
-  const fallbackSosCrossCartons       = sosSum(sosInbound, "ac2");
-  const fallbackSosDgPalletsRampa     = sosSum(sosRampa,   "st");
-  const fallbackSosCrossPalletsRampa  = sosSum(sosRampa,   "st2");
-  const fallbackSosCrossCartonsRampa  = sosSum(sosRampa,   "ac2");
-  const fallbackSosDgPalletsPlac      = sosSum(sosPlac,    "st");
-  const fallbackSosCrossPalletsPlac   = sosSum(sosPlac,    "st2");
-  const fallbackSosCrossCartonsPlac   = sosSum(sosPlac,    "ac2");
+  const fallbackSosDgPallets = sosSum(sosInbound, "st");
+  const fallbackSosCrossPallets = sosSum(sosInbound, "st2");
+  const fallbackSosCrossCartons = sosSum(sosInbound, "ac2");
+  const fallbackSosDgPalletsRampa = sosSum(sosRampa, "st");
+  const fallbackSosCrossPalletsRampa = sosSum(sosRampa, "st2");
+  const fallbackSosCrossCartonsRampa = sosSum(sosRampa, "ac2");
+  const fallbackSosDgPalletsPlac = sosSum(sosPlac, "st");
+  const fallbackSosCrossPalletsPlac = sosSum(sosPlac, "st2");
+  const fallbackSosCrossCartonsPlac = sosSum(sosPlac, "ac2");
 
   const sortingCrossBoxes = bxCrossFromSscc + fallbackSosCrossCartons;
 
@@ -554,21 +560,21 @@ function computeKpiFromData(
     over20Items,
     paletyZ20K,
     pelnePaletyDg,
-    fallbackCrossPallets,         // palety CROSS Wrocław (W drodze)
-    fallbackDgPallets,            // palety DG Wrocław (W drodze, w pelnePaletyDg)
-    fallbackWroclawDgRampa,       // palety DG Wrocław (Rozładowany, w pelnePaletyDgRampa)
-    fallbackWroclawCrossRampa,    // palety CROSS Wrocław (Rozładowany)
-    fallbackWroclawDgPlac,        // palety DG Wrocław (Na placu, w pelnePaletyDgPlac)
-    fallbackWroclawCrossPlac,     // palety CROSS Wrocław (Na placu)
-    fallbackSosDgPallets,         // palety DG SOS (W drodze, w pelnePaletyDg)
-    fallbackSosCrossPallets,      // palety CROSS SOS (W drodze)
-    fallbackSosCrossCartons,      // kartony CROSS SOS (W drodze, w sortingCrossBoxes)
-    fallbackSosDgPalletsRampa,    // palety DG SOS (Rozładowany, w pelnePaletyDgRampa)
+    fallbackCrossPallets, // palety CROSS Wrocław (W drodze)
+    fallbackDgPallets, // palety DG Wrocław (W drodze, w pelnePaletyDg)
+    fallbackWroclawDgRampa, // palety DG Wrocław (Rozładowany, w pelnePaletyDgRampa)
+    fallbackWroclawCrossRampa, // palety CROSS Wrocław (Rozładowany)
+    fallbackWroclawDgPlac, // palety DG Wrocław (Na placu, w pelnePaletyDgPlac)
+    fallbackWroclawCrossPlac, // palety CROSS Wrocław (Na placu)
+    fallbackSosDgPallets, // palety DG SOS (W drodze, w pelnePaletyDg)
+    fallbackSosCrossPallets, // palety CROSS SOS (W drodze)
+    fallbackSosCrossCartons, // kartony CROSS SOS (W drodze, w sortingCrossBoxes)
+    fallbackSosDgPalletsRampa, // palety DG SOS (Rozładowany, w pelnePaletyDgRampa)
     fallbackSosCrossPalletsRampa, // palety CROSS SOS (Rozładowany)
     fallbackSosCrossCartonsRampa, // kartony CROSS SOS (Rozładowany, w sortCrossRampaBoxes)
-    fallbackSosDgPalletsPlac,     // palety DG SOS (Na placu, w pelnePaletyDgPlac)
-    fallbackSosCrossPalletsPlac,  // palety CROSS SOS (Na placu)
-    fallbackSosCrossCartonsPlac,  // kartony CROSS SOS (Na placu, w sortCrossPlacBoxes)
+    fallbackSosDgPalletsPlac, // palety DG SOS (Na placu, w pelnePaletyDgPlac)
+    fallbackSosCrossPalletsPlac, // palety CROSS SOS (Na placu)
+    fallbackSosCrossCartonsPlac, // kartony CROSS SOS (Na placu, w sortCrossPlacBoxes)
     kontenerSt,
     sortRampaBoxes,
     sortPlacBoxes,
