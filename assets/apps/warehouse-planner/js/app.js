@@ -7,9 +7,11 @@ import { parseSSCCCsv, parseSSCCOutboundCsv, parseAwizacjeXlsx,
 import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataModel.js';
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
          renderProcessesTab, renderTimesTab, renderStaffingTab,
-         updateFileStatus, updateSlotUI } from './ui.js';
+         updateFileStatus, updateSlotUI, renderHomeCards,
+         renderOutboundIndicatorsTab } from './ui.js';
 import { tomorrow, today, formatDate, isSameDay } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
+import { loadOutboundIndicators, setOutboundIndicatorValue } from './outboundIndicators.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
@@ -22,6 +24,13 @@ const state = {
   filterDateFrom:  null,
   filterDateTo:    null,
   selectedSisSet:  null,   // null = wszystkie zaznaczone
+
+  currentDepartment: null,          // null (strona główna) | 'inbound' | 'outbound'
+  outbound: {
+    model:      null,
+    staffing:   null,
+    indicators: loadOutboundIndicators(),  // wskaźniki logistyczne — localStorage (na razie)
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,11 +52,64 @@ document.addEventListener('DOMContentLoaded', () => {
   setupTruckFilters();
   setupSearchBoxes();
   setupTruckSelection();
+  setupHomeNavigation();
+  setupOutboundIndicators();
 
   applyDateToInputs();
   renderEmpty();
   renderTimesTab();
+  renderOutboundIndicatorsTab(state.outbound.indicators);
+  renderHomeCards({ inboundModel: null, inboundStaffing: null, outboundStaffing: null });
+  showHome();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OUTBOUND — WSKAŹNIKI LOGISTYCZNE
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupOutboundIndicators() {
+  document.addEventListener('change', e => {
+    if (!e.target.classList.contains('indicator-input')) return;
+    const id    = e.target.dataset.id;
+    const value = parseFloat(e.target.value.replace(',', '.'));
+    if (!Number.isFinite(value)) return;
+    state.outbound.indicators = setOutboundIndicatorValue(state.outbound.indicators, id, value);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STRONA GŁÓWNA / NAWIGACJA MIĘDZY DZIAŁAMI
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupHomeNavigation() {
+  document.querySelectorAll('.dept-card').forEach(card => {
+    card.addEventListener('click', () => showDepartment(card.dataset.dept));
+  });
+  document.getElementById('btn-go-home')?.addEventListener('click', showHome);
+}
+
+function showHome() {
+  state.currentDepartment = null;
+  document.getElementById('home-view')?.classList.remove('hidden');
+  document.getElementById('main-layout')?.classList.add('hidden');
+  const sub = document.getElementById('topbar-sub');
+  if (sub) sub.textContent = 'Wybierz dział';
+  renderHomeCards({
+    inboundModel:     state.model,
+    inboundStaffing:  state.staffing,
+    outboundStaffing: state.outbound.staffing,
+  });
+}
+
+function showDepartment(dept) {
+  state.currentDepartment = dept;
+  document.getElementById('home-view')?.classList.add('hidden');
+  document.getElementById('main-layout')?.classList.remove('hidden');
+  document.getElementById('dept-inbound')?.classList.toggle('hidden', dept !== 'inbound');
+  document.getElementById('dept-outbound')?.classList.toggle('hidden', dept !== 'outbound');
+  const sub = document.getElementById('topbar-sub');
+  if (sub) sub.textContent = dept === 'outbound' ? 'Magazyn outbound' : 'Magazyn inbound';
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WYBÓR TRANSPORTÓW W ZAKŁADCE PROCESY
@@ -465,6 +527,11 @@ function tryRebuildModel() {
     renderSsccTable(state.ssccInbound || []);
     renderProcessesTab(state.staffing, state.model.trucks, null);
     renderStaffingTab(state.staffing);
+    renderHomeCards({
+      inboundModel:     state.model,
+      inboundStaffing:  state.staffing,
+      outboundStaffing: state.outbound.staffing,
+    });
     updateDataSummary();
   } catch (err) {
     console.error(err);
