@@ -1432,6 +1432,64 @@ export function renderStaffingTab(staffing) {
     '</div>';
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STRONA GŁÓWNA — KARTY DZIAŁÓW
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function renderHomeCards({ inboundModel, inboundStaffing, outboundStaffing }) {
+  renderDeptCardKpis('dept-card-kpis-inbound', inboundModel, inboundStaffing, 'Wczytaj pliki, aby zobaczyć wyniki');
+  renderDeptCardKpis('dept-card-kpis-outbound', null, outboundStaffing, 'Brak danych — funkcja w budowie');
+}
+
+function renderDeptCardKpis(elId, model, staffing, emptyText) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  if (!model || !staffing) {
+    el.innerHTML = '<div class="dept-card-empty">' + esc(emptyText) + '</div>';
+    return;
+  }
+
+  el.innerHTML =
+    '<div class="dept-card-kpi">' +
+      '<div class="dept-card-kpi-value">' + staffing.totalPeople + '</div>' +
+      '<div class="dept-card-kpi-label">FTE Total</div>' +
+    '</div>' +
+    '<div class="dept-card-kpi">' +
+      '<div class="dept-card-kpi-value">' + (model.kpi?.totalTrucks ?? 0) + '</div>' +
+      '<div class="dept-card-kpi-label">Transporty</div>' +
+    '</div>';
+}
+
+export function renderOutboundIndicatorsTab(indicators) {
+  const wrap = document.getElementById('outbound-indicators-content');
+  if (!wrap) return;
+
+  let rows = '';
+  for (const row of indicators) {
+    if (row.spacer) {
+      rows += '<tr class="indicators-spacer-row"><td colspan="2"></td></tr>';
+      continue;
+    }
+    rows +=
+      '<tr>' +
+        '<td>' + esc(row.label) + '</td>' +
+        '<td class="num">' +
+          '<input type="number" step="any" class="indicator-input" ' +
+            'data-id="' + esc(row.id) + '" value="' + row.value + '">' +
+        '</td>' +
+      '</tr>';
+  }
+
+  wrap.innerHTML =
+    '<div class="table-wrap">' +
+      '<table class="data-table indicators-table">' +
+        '<thead><tr><th>Proces</th><th class="num">Wartość</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+    '</div>';
+}
+
 export function renderTimesTab() {
   const wrap = document.getElementById("times-content");
   if (!wrap) return;
