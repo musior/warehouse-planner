@@ -8,10 +8,12 @@ import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataM
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
          renderProcessesTab, renderTimesTab, renderStaffingTab,
          updateFileStatus, updateSlotUI, renderHomeCards,
-         renderOutboundIndicatorsTab } from './ui.js';
+         renderOutboundIndicatorsTab, renderOutboundProcessesTab } from './ui.js';
 import { tomorrow, today, formatDate, isSameDay } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
-import { loadOutboundIndicators, setOutboundIndicatorValue } from './outboundIndicators.js';
+import { loadOutboundIndicators, setOutboundIndicatorField } from './outboundIndicators.js';
+import { parseForecastCsv }                      from './parsersOutbound.js';
+import { calcAllOutboundProcesses }              from './processesOutbound.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
@@ -27,9 +29,12 @@ const state = {
 
   currentDepartment: null,          // null (strona główna) | 'inbound' | 'outbound'
   outbound: {
-    model:      null,
-    staffing:   null,
-    indicators: loadOutboundIndicators(),  // wskaźniki logistyczne — localStorage (na razie)
+    model:             null,
+    staffing:          null,
+    indicators:        loadOutboundIndicators(),  // wskaźniki logistyczne — localStorage (na razie)
+    forecast3m:        null,
+    forecastSolventum: null,
+    processes:         null,
   },
 };
 
@@ -69,11 +74,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupOutboundIndicators() {
   document.addEventListener('change', e => {
-    if (!e.target.classList.contains('indicator-input')) return;
+    const isValue        = e.target.classList.contains('indicator-input');
+    const isStandardTime = e.target.classList.contains('indicator-standard-time-input');
+    if (!isValue && !isStandardTime) return;
+
     const id    = e.target.dataset.id;
     const value = parseFloat(e.target.value.replace(',', '.'));
     if (!Number.isFinite(value)) return;
-    state.outbound.indicators = setOutboundIndicatorValue(state.outbound.indicators, id, value);
+
+    const field = isValue ? 'value' : 'standardTime';
+    state.outbound.indicators = setOutboundIndicatorField(state.outbound.indicators, id, field, value);
+    recomputeOutboundProcesses();
   });
 }
 
@@ -389,6 +400,8 @@ function setupUploadOverlay() {
   setupFileSlot('slot-awizacje',     'awizacje',     handleAwizacjeFile);
   setupFileSlot('slot-sscc-inbound', 'sscc-inbound', handleSsccInboundFile);
   setupFileSlot('slot-sscc-arrived', 'sscc-arrived', handleSsccArrivedFile);
+  setupFileSlot('slot-outbound-forecast-3m',        'outbound-forecast-3m',        handleForecast3mFile);
+  setupFileSlot('slot-outbound-forecast-solventum', 'outbound-forecast-solventum', handleForecastSolventumFile);
 }
 
 function setupFileSlot(slotId, fileType, handler) {
@@ -497,6 +510,50 @@ async function handleSsccArrivedFile(file) {
     updateSlotUI('slot-sscc-arrived', 'error', file.name);
     showError(`Błąd SSCC Outbound: ${err.message}`);
   }
+}
+
+async function handleForecast3mFile(file) {
+  updateFileStatus('outbound-forecast-3m', 'loading');
+  updateSlotUI('slot-outbound-forecast-3m', 'loading', file.name);
+  try {
+    const buf = await readFile(file);
+    state.outbound.forecast3m = parseForecastCsv(buf, file.name);
+    updateFileStatus('outbound-forecast-3m', 'ok');
+    updateSlotUI('slot-outbound-forecast-3m', 'ok', file.name);
+    recomputeOutboundProcesses();
+  } catch (err) {
+    console.error(err);
+    updateFileStatus('outbound-forecast-3m', 'error');
+    updateSlotUI('slot-outbound-forecast-3m', 'error', file.name);
+    showError(`Błąd Forecast 3M: ${err.message}`);
+  }
+}
+
+async function handleForecastSolventumFile(file) {
+  updateFileStatus('outbound-forecast-solventum', 'loading');
+  updateSlotUI('slot-outbound-forecast-solventum', 'loading', file.name);
+  try {
+    const buf = await readFile(file);
+    state.outbound.forecastSolventum = parseForecastCsv(buf, file.name);
+    updateFileStatus('outbound-forecast-solventum', 'ok');
+    updateSlotUI('slot-outbound-forecast-solventum', 'ok', file.name);
+    recomputeOutboundProcesses();
+  } catch (err) {
+    console.error(err);
+    updateFileStatus('outbound-forecast-solventum', 'error');
+    updateSlotUI('slot-outbound-forecast-solventum', 'error', file.name);
+    showError(`Błąd Forecast Solventum: ${err.message}`);
+  }
+}
+
+function recomputeOutboundProcesses() {
+  if (!state.outbound.forecast3m && !state.outbound.forecastSolventum) return;
+  state.outbound.processes = calcAllOutboundProcesses({
+    forecast3m:        state.outbound.forecast3m,
+    forecastSolventum: state.outbound.forecastSolventum,
+    indicators:        state.outbound.indicators,
+  });
+  renderOutboundProcessesTab(state.outbound.processes);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
