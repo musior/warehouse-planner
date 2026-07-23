@@ -12,57 +12,155 @@ export const LINE_STATUS_OUT = [
 ];
 export const LINE_STATUS_VAS = [...LINE_STATUS_OUT, "On copacking zone"];
 
+// Check&Pack filtrują szerzej niż zwykłe procesy "out" — dodatkowo uwzględniają
+// linie już przekazane dalej w procesie (kontrola, copacking, konsolidacja).
+export const LINE_STATUS_CHECK_PACK = [
+  ...LINE_STATUS_OUT,
+  "On control zone",
+  "On copacking zone",
+  "Waiting for consolidation",
+];
+
 // Procesy, które liczą FTE wg wzoru: (ilość linii × wskaźnik) × czas standardowy / 408.
-// Ilość linii jest liczona identycznie dla każdego z nich (patrz analyzeForecastRows),
-// różni je tylko wskaźnik logistyczny i czas standardowy z zakładki Wskaźniki.
+// Ilość linii jest liczona identycznie dla procesów z tym samym statusSet (patrz
+// analyzeForecastRows) — różni je tylko wskaźnik logistyczny, czas standardowy
+// i ewentualnie filtr LINE_STATUS (statusSet).
 const LINE_COUNT_PROCESSES = [
   {
     key: "pickByOrder",
     indicatorId: "pick-by-order",
     label: "PICK BY ORDER",
     icon: "&#128230;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
   },
   {
     key: "pickByItem",
     indicatorId: "pick-by-item",
     label: "PICK BY ITEM",
     icon: "&#128203;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
   },
   {
     key: "pickByOrderMezzanine",
     indicatorId: "pick-by-order-mezzanine",
     label: "PICK BY ORDER / MEZZANINE",
     icon: "&#127970;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
   },
   {
     key: "pickByItemMezzanine",
     indicatorId: "pick-by-item-mezzanine",
     label: "PICK BY ITEM / MEZZANINE",
     icon: "&#128194;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
   },
   {
     key: "fullPalletsMission",
     indicatorId: "full-pallets-mission",
     label: "FULL PALLETS MISSION",
     icon: "&#127919;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
   },
   {
     key: "replenishment",
     indicatorId: "replenishment",
     label: "REPLENISHMENT",
     icon: "&#128230;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
   },
   {
     key: "transfer",
     indicatorId: "transfer",
     label: "TRANSFER",
     icon: "&#128341;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
   },
   {
     key: "palletsFoiling",
     indicatorId: "pallets-foiling",
     label: "PALLETS FOILING - DG & CROSS",
     icon: "&#129963;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
+  },
+  {
+    key: "palletsLoading",
+    indicatorId: "pallets-loading",
+    label: "PALLETS LOADING - DG",
+    icon: "&#128333;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
+  },
+  {
+    key: "boxesLoading",
+    indicatorId: "boxes-loading",
+    label: "BOXES LOADING - DG",
+    icon: "&#128111;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
+  },
+  {
+    key: "palletsLoadingXDock",
+    indicatorId: "pallets-loading-xdock",
+    label: "PALLETS LOADING (XDOCK)",
+    icon: "&#128222;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
+  },
+  {
+    key: "boxesLoadingXDock",
+    indicatorId: "boxes-loading-xdock",
+    label: "BOXES LOADING (XDOCK)",
+    icon: "&#128948;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
+  },
+  {
+    key: "palletChange",
+    indicatorId: "pallet-change",
+    label: "PALLET CHANGE",
+    icon: "&#113944;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
+  },
+  {
+    key: "exports",
+    indicatorId: "exports",
+    label: "EXPORTS",
+    icon: "&#128230;",
+    statusSet: LINE_STATUS_OUT,
+    filterGroup: "OUT",
+  },
+  {
+    key: "checkPackPbo",
+    indicatorId: "check-pack-pbo",
+    label: "CHECK&PACK PBO",
+    icon: "&#9989;",
+    statusSet: LINE_STATUS_CHECK_PACK,
+    filterGroup: "CHECK&PACK",
+  },
+  {
+    key: "checkPackPbi",
+    indicatorId: "check-pack-pbi",
+    label: "CHECK&PACK PBI",
+    icon: "&#9989;",
+    statusSet: LINE_STATUS_CHECK_PACK,
+    filterGroup: "CHECK&PACK",
+  },
+  {
+    key: "checkPackDpd",
+    indicatorId: "check-pack-dpd",
+    label: "CHECK&PACK DPD",
+    icon: "&#9989;",
+    statusSet: LINE_STATUS_CHECK_PACK,
+    filterGroup: "CHECK&PACK",
   },
 ];
 
@@ -132,12 +230,18 @@ function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
 }
 
 /**
- * Liczy ilość linii (per klient) wg wspólnej reguły "out" — raz na oba pliki,
- * bo wszystkie procesy z LINE_COUNT_PROCESSES filtrują dokładnie tak samo.
+ * Liczy ilość linii (per klient) dla danego zestawu statusów (statusSet) — raz
+ * na oba pliki. Procesy dzielące ten sam statusSet (np. wszystkie "OUT") współdzielą
+ * ten sam wynik, żeby nie liczyć identycznego filtra po kilka razy.
  */
-function computeOutLineStats({ forecast3m, forecastSolventum, planningDate }) {
+function computeLineStatsForStatusSet({
+  forecast3m,
+  forecastSolventum,
+  planningDate,
+  statusSet,
+}) {
   const extraDate = nextBusinessDay(planningDate);
-  const opts = { planningDate, extraDate, statusSet: LINE_STATUS_OUT };
+  const opts = { planningDate, extraDate, statusSet };
   return {
     extraDate,
     stats3m: analyzeForecastRows(forecast3m || [], opts),
@@ -189,14 +293,20 @@ export function calcAllOutboundProcesses({
   indicators,
 }) {
   const planningDate = nextBusinessDay(today());
-  const lineStats = computeOutLineStats({
-    forecast3m,
-    forecastSolventum,
-    planningDate,
-  });
+  const lineStatsByStatusSet = new Map(); // statusSet (referencja) -> lineStats
 
   const result = { planningDate };
   for (const def of LINE_COUNT_PROCESSES) {
+    let lineStats = lineStatsByStatusSet.get(def.statusSet);
+    if (!lineStats) {
+      lineStats = computeLineStatsForStatusSet({
+        forecast3m,
+        forecastSolventum,
+        planningDate,
+        statusSet: def.statusSet,
+      });
+      lineStatsByStatusSet.set(def.statusSet, lineStats);
+    }
     result[def.key] = buildLineCountResult(
       def.indicatorId,
       indicators,
