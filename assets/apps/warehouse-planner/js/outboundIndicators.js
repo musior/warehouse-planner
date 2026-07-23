@@ -45,12 +45,12 @@ export const DEFAULT_OUTBOUND_INDICATORS = [
     value: 0.097341,
     standardTime: 2.6945,
   },
-  { id: "transfer", label: "TRANSFER", value: 0.042848, standardTime: 0 },
+  { id: "transfer", label: "TRANSFER", value: 0.042848, standardTime: 2.6654 },
   {
     id: "pallets-foiling",
     label: "PALLETS FOILING",
     value: 0.149472,
-    standardTime: 0,
+    standardTime: 3.7081,
   },
   {
     id: "pallets-loading",
