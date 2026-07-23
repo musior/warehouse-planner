@@ -1590,9 +1590,18 @@ export function renderOutboundProcessesTab(results) {
     .map((def) => buildLineCountProcessCard(def, results[def.key]))
     .join("");
 
-  // Debug — ilość linii jest liczona identycznie dla wszystkich procesów z tej
-  // grupy, więc panel diagnostyczny wystarczy pokazać raz (na bazie pierwszego).
-  const debugHtml = buildForecastDebugBlock(results[availableDefs[0].key]);
+  // Debug — ilość linii jest liczona identycznie dla procesów dzielących ten sam
+  // filtr (filterGroup), więc panel diagnostyczny pokazujemy raz na grupę filtrów
+  // (np. osobno dla OUT i osobno dla CHECK&PACK, bo mają różny LINE_STATUS).
+  const seenGroups = new Set();
+  const debugHtml = availableDefs
+    .filter((def) => {
+      if (seenGroups.has(def.filterGroup)) return false;
+      seenGroups.add(def.filterGroup);
+      return true;
+    })
+    .map((def) => buildForecastDebugBlock(def.filterGroup, results[def.key]))
+    .join("");
 
   wrap.innerHTML = '<div class="process-cards">' + cardsHtml + "</div>" + debugHtml;
 }
@@ -1652,7 +1661,7 @@ function buildLineCountProcessCard(def, resultObj) {
 
 // TYMCZASOWE — panel diagnostyczny do weryfikacji formatu plików Forecast.
 // Do usunięcia, gdy potwierdzimy poprawność parsowania/filtrowania na realnych danych.
-function buildForecastDebugBlock(pbo) {
+function buildForecastDebugBlock(groupLabel, pbo) {
   const dateRow = (label, d) =>
     '<div class="process-breakdown-row"><span class="process-breakdown-label">' +
     esc(label) +
@@ -1704,7 +1713,9 @@ function buildForecastDebugBlock(pbo) {
 
   return (
     '<div class="debug-panel">' +
-    '<div class="debug-panel-title">Debug (tymczasowe)</div>' +
+    '<div class="debug-panel-title">Debug (tymczasowe) — filtr ' +
+    esc(groupLabel) +
+    "</div>" +
     dateRow("Dzień planowania", pbo.planningDate) +
     dateRow("Dzień dodatkowy (Polska)", pbo.extraDate) +
     pbo.clients.map(clientBlock).join("") +
