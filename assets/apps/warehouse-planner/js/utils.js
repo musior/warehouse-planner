@@ -103,6 +103,19 @@ export function tomorrow() {
 }
 
 /**
+ * Zwraca najbliższy dzień roboczy PO podanej dacie (pomija sobotę/niedzielę)
+ */
+export function nextBusinessDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  const day = d.getDay(); // 0 = niedziela, 6 = sobota
+  if (day === 6) d.setDate(d.getDate() + 2);
+  else if (day === 0) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+/**
  * Bezpieczna konwersja stringa na liczbę (obsługuje przecinek jako separator dziesiętny)
  */
 export function toNumber(value) {
