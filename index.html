@@ -101,11 +101,19 @@
         <div class="upload-section">
           <h3 class="upload-section-title">Outbound</h3>
           <div class="upload-slots">
-            <div class="upload-slot upload-slot--placeholder" id="slot-outbound-data">
-              <input type="file" accept=".xlsx,.xls,.csv" class="slot-input" />
+            <div class="upload-slot" id="slot-outbound-forecast-3m">
+              <input type="file" accept=".csv" class="slot-input" />
               <div class="slot-icon">&#128230;</div>
-              <div class="slot-label">Dane Outbound</div>
-              <div class="slot-format">wkrótce</div>
+              <div class="slot-label">Forecast 3M</div>
+              <div class="slot-format">.csv</div>
+              <div class="slot-filename"></div>
+              <div class="slot-status-icon"></div>
+            </div>
+            <div class="upload-slot" id="slot-outbound-forecast-solventum">
+              <input type="file" accept=".csv" class="slot-input" />
+              <div class="slot-icon">&#128230;</div>
+              <div class="slot-label">Forecast Solventum</div>
+              <div class="slot-format">.csv</div>
               <div class="slot-filename"></div>
               <div class="slot-status-icon"></div>
             </div>
@@ -127,6 +135,18 @@
               >○</span
             >
             SSCC Przybyłe
+          </div>
+          <div class="file-status-item">
+            <span class="file-status-icon" id="file-status-outbound-forecast-3m"
+              >○</span
+            >
+            Forecast 3M
+          </div>
+          <div class="file-status-item">
+            <span class="file-status-icon" id="file-status-outbound-forecast-solventum"
+              >○</span
+            >
+            Forecast Solventum
           </div>
         </div>
         <div class="upload-panel-footer">
