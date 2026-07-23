@@ -52,6 +52,18 @@ const LINE_COUNT_PROCESSES = [
     label: "REPLENISHMENT",
     icon: "&#128230;",
   },
+  {
+    key: "transfer",
+    indicatorId: "transfer",
+    label: "TRANSFER",
+    icon: "&#128341;",
+  },
+  {
+    key: "palletsFoiling",
+    indicatorId: "pallets-foiling",
+    label: "PALLETS FOILING - DG & CROSS",
+    icon: "&#129963;",
+  },
 ];
 
 // Mianownik wzoru FTE (minuty dostępne w zmianie po odliczeniach) — na razie
