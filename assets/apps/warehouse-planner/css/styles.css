@@ -344,18 +344,6 @@ body {
   margin-bottom: 20px;
 }
 
-.upload-slot--placeholder {
-  cursor: default;
-  opacity: 0.6;
-}
-.upload-slot--placeholder:hover {
-  border-color: var(--border-md);
-  background: none;
-}
-.upload-slot--placeholder .slot-input {
-  pointer-events: none;
-}
-
 .upload-slot {
   position: relative;
   border: 1.5px dashed var(--border-md);
@@ -1733,10 +1721,46 @@ body {
   font-size: 11px;
 }
 
+/* ── Debug panel (tymczasowy, Outbound) ───────────────────────────────────── */
+.debug-panel {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--amber-bg);
+  border: 1px dashed var(--amber);
+  border-radius: var(--radius-md);
+  max-width: 480px;
+}
+.debug-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--amber);
+  margin-bottom: 8px;
+}
+.debug-client-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.debug-client-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.debug-freeform {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 6px;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
 /* ── Zakładka: Wskaźniki logistyczne (Outbound) ───────────────────────────── */
 .indicators-table {
   min-width: 0;
-  max-width: 420px;
+  max-width: 560px;
 }
 .indicators-table tr.indicators-spacer-row td {
   padding: 6px 0;
