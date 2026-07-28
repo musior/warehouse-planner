@@ -325,4 +325,30 @@ export function calcAllOutboundProcesses({
   return result;
 }
 
+/**
+ * Sumuje FTE ze wszystkich procesów Outbound — łącznie i per klient (3M / Solventum).
+ * Używane na karcie działu na stronie głównej i w zakładce Planowanie ludzi.
+ */
+export function sumOutboundFteByClient(processesResult) {
+  let totalFte = 0;
+  let fte3m = 0;
+  let fteSolventum = 0;
+
+  for (const def of LINE_COUNT_PROCESSES) {
+    const result = processesResult?.[def.key];
+    if (!result) continue;
+    for (const c of result.clients) {
+      totalFte += c.fte;
+      if (c.client === "3M") fte3m += c.fte;
+      else if (c.client === "Solventum") fteSolventum += c.fte;
+    }
+  }
+
+  return {
+    totalFte: round(totalFte, 2),
+    fte3m: round(fte3m, 2),
+    fteSolventum: round(fteSolventum, 2),
+  };
+}
+
 export { LINE_COUNT_PROCESSES };
