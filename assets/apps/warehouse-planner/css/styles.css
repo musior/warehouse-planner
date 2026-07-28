@@ -1748,7 +1748,8 @@ body {
 }
 
 /* ── Zakładka: Planowanie ludzi ───────────────────────────────────────────── */
-#staffing-content {
+#staffing-content,
+#outbound-staffing-content {
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1906,6 +1907,9 @@ body {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
+}
+.staffing-vol-row.staffing-vol-row--outbound {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .staffing-vol-card {
