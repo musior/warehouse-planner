@@ -8,12 +8,13 @@ import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataM
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
          renderProcessesTab, renderTimesTab, renderStaffingTab,
          updateFileStatus, updateSlotUI, renderHomeCards,
-         renderOutboundIndicatorsTab, renderOutboundProcessesTab } from './ui.js';
+         renderOutboundIndicatorsTab, renderOutboundProcessesTab,
+         renderOutboundStaffingTab } from './ui.js';
 import { tomorrow, today, formatDate, isSameDay } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
 import { loadOutboundIndicators, setOutboundIndicatorField } from './outboundIndicators.js';
 import { parseForecastCsv }                      from './parsersOutbound.js';
-import { calcAllOutboundProcesses }              from './processesOutbound.js';
+import { calcAllOutboundProcesses, sumOutboundFteByClient } from './processesOutbound.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
@@ -29,14 +30,17 @@ const state = {
 
   currentDepartment: null,          // null (strona główna) | 'inbound' | 'outbound'
   outbound: {
-    model:             null,
-    staffing:          null,
     indicators:        loadOutboundIndicators(),  // wskaźniki logistyczne — localStorage (na razie)
     forecast3m:        null,
     forecastSolventum: null,
     processes:         null,
   },
 };
+
+function getOutboundTotalFte() {
+  if (!state.outbound.processes) return null;
+  return sumOutboundFteByClient(state.outbound.processes).totalFte;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // START
@@ -64,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderEmpty();
   renderTimesTab();
   renderOutboundIndicatorsTab(state.outbound.indicators);
-  renderHomeCards({ inboundModel: null, inboundStaffing: null, outboundStaffing: null });
+  renderHomeCards({ inboundModel: null, inboundStaffing: null, outboundTotalFte: null });
   showHome();
 });
 
@@ -108,7 +112,7 @@ function showHome() {
   renderHomeCards({
     inboundModel:     state.model,
     inboundStaffing:  state.staffing,
-    outboundStaffing: state.outbound.staffing,
+    outboundTotalFte: getOutboundTotalFte(),
   });
 }
 
@@ -554,6 +558,19 @@ function recomputeOutboundProcesses() {
     indicators:        state.outbound.indicators,
   });
   renderOutboundProcessesTab(state.outbound.processes);
+
+  const totals = sumOutboundFteByClient(state.outbound.processes);
+  renderOutboundStaffingTab({
+    ...totals,
+    lineCount3m:        (state.outbound.forecast3m        || []).length,
+    lineCountSolventum: (state.outbound.forecastSolventum || []).length,
+  });
+
+  renderHomeCards({
+    inboundModel:     state.model,
+    inboundStaffing:  state.staffing,
+    outboundTotalFte: totals.totalFte,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -587,7 +604,7 @@ function tryRebuildModel() {
     renderHomeCards({
       inboundModel:     state.model,
       inboundStaffing:  state.staffing,
-      outboundStaffing: state.outbound.staffing,
+      outboundTotalFte: getOutboundTotalFte(),
     });
     updateDataSummary();
   } catch (err) {
