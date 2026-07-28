@@ -39,10 +39,8 @@ export function parseForecastCsv(buffer, filename) {
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = splitCsvLine(lines[i], delimiter);
-    const rawShipDate = cells[colIndex.EXPECTED_SHIP_DATE];
     rows.push({
-      expectedShipDate:    parseForecastDate(rawShipDate),
-      rawExpectedShipDate: rawShipDate,   // zachowane do diagnostyki
+      expectedShipDate:    parseForecastDate(cells[colIndex.EXPECTED_SHIP_DATE]),
       lineStatus:          (cells[colIndex.LINE_STATUS] || '').trim(),
       obd:                 (cells[colIndex.OBD] || '').trim(),
       nameCountry:         (cells[colIndex.NAME_COUNTRY] || '').trim(),
