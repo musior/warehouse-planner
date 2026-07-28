@@ -208,9 +208,7 @@ const LINE_COUNT_PROCESSES = [
 const OUTBOUND_FTE_DIVISOR = 408;
 
 /**
- * Analizuje wiersze Forecastu względem filtra statusu linii i reguł dat,
- * jednocześnie zbierając statystyki diagnostyczne (przydatne dopóki nie mamy
- * pewności co do dokładnego formatu plików wsadowych).
+ * Analizuje wiersze Forecastu względem filtra statusu linii i reguł dat.
  *
  * Reguła dat: liczymy WSZYSTKIE zaległe linie (data <= dzień planowania —
  * czyli backlog z dni wcześniejszych oraz dzień dzisiejszy razem z jutrem),
@@ -220,29 +218,12 @@ const OUTBOUND_FTE_DIVISOR = 408;
  */
 function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
   const statusLower = statusSet.map((s) => s.toLowerCase());
-  const statusesSeen = new Map(); // status -> ile razy wystąpił
-  const badDateSamples = [];
 
-  let unparsedDates = 0;
-  let statusMatch = 0;
-  let dateMatch = 0;
   let bothMatch = 0;
   let vasSum = 0;
 
   for (const row of rows) {
-    if (row.lineStatus) {
-      statusesSeen.set(
-        row.lineStatus,
-        (statusesSeen.get(row.lineStatus) || 0) + 1,
-      );
-    }
-
-    if (!row.expectedShipDate) {
-      unparsedDates++;
-      if (badDateSamples.length < 5)
-        badDateSamples.push(row.rawExpectedShipDate);
-      continue;
-    }
+    if (!row.expectedShipDate) continue;
 
     const statusOk = statusLower.includes((row.lineStatus || "").toLowerCase());
     const isPoland = (row.nameCountry || "").trim().toUpperCase() === "POLSKA";
@@ -250,27 +231,13 @@ function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
       row.expectedShipDate.getTime() <= planningDate.getTime() ||
       (isSameDay(row.expectedShipDate, extraDate) && isPoland);
 
-    if (statusOk) statusMatch++;
-    if (dateOk) dateMatch++;
     if (statusOk && dateOk) {
       bothMatch++;
       vasSum += row.vas || 0;
     }
   }
 
-  return {
-    totalRows: rows.length,
-    unparsedDates,
-    statusMatch,
-    dateMatch,
-    bothMatch,
-    vasSum: round(vasSum, 2),
-    badDateSamples,
-    statusesSeen: [...statusesSeen.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([status, count]) => ({ status, count })),
-  };
+  return { bothMatch, vasSum: round(vasSum, 2) };
 }
 
 /**
@@ -320,7 +287,6 @@ function buildProcessResult(def, indicators, planningDate, lineStats) {
       result,
       standardTime,
       fte,
-      debug: stats,
     };
   };
 
