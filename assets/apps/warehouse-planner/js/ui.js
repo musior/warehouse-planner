@@ -1611,13 +1611,16 @@ function buildLineCountProcessCard(def, resultObj) {
     resultObj.clients.reduce((sum, c) => sum + c.fte, 0),
     2,
   );
+  const metricLabel = def.metric === "vasSum" ? "suma VAS" : "linii";
   const rows = resultObj.clients
     .map(
       (c) =>
         '<div class="process-breakdown-row"><span class="process-breakdown-label">' +
         esc(c.client) +
-        ' — linii</span><span class="process-breakdown-value">' +
-        c.lineCount +
+        " — " +
+        metricLabel +
+        '</span><span class="process-breakdown-value">' +
+        (def.metric === "vasSum" ? c.vasSum : c.lineCount) +
         "</span></div>" +
         '<div class="process-breakdown-row"><span class="process-breakdown-label">' +
         esc(c.client) +
@@ -1698,6 +1701,9 @@ function buildForecastDebugBlock(groupLabel, pbo) {
       "</span></div>" +
       '<div class="process-breakdown-row"><span class="process-breakdown-label">Pasuje status + data</span><span class="process-breakdown-value">' +
       d.bothMatch +
+      "</span></div>" +
+      '<div class="process-breakdown-row"><span class="process-breakdown-label">Suma VAS (pasujące)</span><span class="process-breakdown-value">' +
+      d.vasSum +
       "</span></div>" +
       '<div class="debug-freeform"><b>LINE_STATUS w pliku:</b> ' +
       statuses +
