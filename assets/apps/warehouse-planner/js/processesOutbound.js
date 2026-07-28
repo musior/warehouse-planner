@@ -21,10 +21,22 @@ export const LINE_STATUS_CHECK_PACK = [
   "Waiting for consolidation",
 ];
 
+// Kolejność wyświetlania grup procesów w zakładce Procesy (Outbound).
+export const PROCESS_GROUP_ORDER = [
+  "Picking",
+  "Pallet Operations",
+  "Loading",
+  "Exports",
+  "Check&Pack",
+  "VAS",
+  "Others",
+];
+
 // Procesy, które liczą FTE wg wzoru: (ilość linii × wskaźnik) × czas standardowy / 408.
 // Ilość linii jest liczona identycznie dla procesów z tym samym statusSet (patrz
 // analyzeForecastRows) — różni je tylko wskaźnik logistyczny, czas standardowy
-// i ewentualnie filtr LINE_STATUS (statusSet).
+// i ewentualnie filtr LINE_STATUS (statusSet). Pole "group" decyduje tylko o
+// pogrupowaniu wizualnym w UI, nie wpływa na obliczenia.
 const LINE_COUNT_PROCESSES = [
   {
     key: "pickByOrder",
@@ -33,6 +45,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128230;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Picking",
   },
   {
     key: "pickByItem",
@@ -41,6 +54,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128203;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Picking",
   },
   {
     key: "pickByOrderMezzanine",
@@ -49,6 +63,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#127970;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Picking",
   },
   {
     key: "pickByItemMezzanine",
@@ -57,6 +72,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128194;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Picking",
   },
   {
     key: "fullPalletsMission",
@@ -65,6 +81,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#127919;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Pallet Operations",
   },
   {
     key: "replenishment",
@@ -73,6 +90,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128230;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Pallet Operations",
   },
   {
     key: "transfer",
@@ -81,6 +99,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128341;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Pallet Operations",
   },
   {
     key: "palletsFoiling",
@@ -89,6 +108,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#129963;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Others",
   },
   {
     key: "palletsLoading",
@@ -97,6 +117,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128333;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Loading",
   },
   {
     key: "boxesLoading",
@@ -105,6 +126,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128111;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Loading",
   },
   {
     key: "palletsLoadingXDock",
@@ -113,6 +135,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128222;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Loading",
   },
   {
     key: "boxesLoadingXDock",
@@ -121,6 +144,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128948;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Loading",
   },
   {
     key: "palletChange",
@@ -129,6 +153,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#113944;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Others",
   },
   {
     key: "exports",
@@ -137,6 +162,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#128230;",
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
+    group: "Exports",
   },
   {
     key: "checkPackPbo",
@@ -145,6 +171,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#9989;",
     statusSet: LINE_STATUS_CHECK_PACK,
     filterGroup: "CHECK&PACK",
+    group: "Check&Pack",
   },
   {
     key: "checkPackPbi",
@@ -153,6 +180,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#9989;",
     statusSet: LINE_STATUS_CHECK_PACK,
     filterGroup: "CHECK&PACK",
+    group: "Check&Pack",
   },
   {
     key: "checkPackDpd",
@@ -161,6 +189,7 @@ const LINE_COUNT_PROCESSES = [
     icon: "&#9989;",
     statusSet: LINE_STATUS_CHECK_PACK,
     filterGroup: "CHECK&PACK",
+    group: "Check&Pack",
   },
   {
     key: "vas",
@@ -170,6 +199,7 @@ const LINE_COUNT_PROCESSES = [
     statusSet: LINE_STATUS_VAS,
     filterGroup: "VAS",
     metric: "vasSum", // suma kolumny VAS z pasujących linii, bez mnożenia przez wskaźnik
+    group: "VAS",
   },
 ];
 
