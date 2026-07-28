@@ -5,7 +5,7 @@
 import { formatDate, round, isSameDay } from "./utils.js";
 import { buildSsccDetailTable } from "./dataModel.js";
 import { PROCESSES } from "./processes.js";
-import { LINE_COUNT_PROCESSES } from "./processesOutbound.js";
+import { LINE_COUNT_PROCESSES, PROCESS_GROUP_ORDER } from "./processesOutbound.js";
 
 // ── Stan UI ───────────────────────────────────────────────────────────────────
 let _selectedSis = null;
@@ -1586,31 +1586,86 @@ export function renderOutboundProcessesTab(results) {
     return;
   }
 
-  const cardsHtml = availableDefs
-    .map((def) => buildLineCountProcessCard(def, results[def.key]))
+  // Grupowanie kart wg PROCESS_GROUP_ORDER (Picking, Pallet Operations, Loading, ...)
+  const defsByGroup = new Map();
+  for (const def of availableDefs) {
+    if (!defsByGroup.has(def.group)) defsByGroup.set(def.group, []);
+    defsByGroup.get(def.group).push(def);
+  }
+
+  const groupTotals = [];
+  const sectionsHtml = PROCESS_GROUP_ORDER.filter((group) =>
+    defsByGroup.has(group),
+  )
+    .map((group) => {
+      const defs = defsByGroup.get(group);
+      const groupTotal = round(
+        defs.reduce((sum, def) => sum + sumClientsFte(results[def.key]), 0),
+        2,
+      );
+      groupTotals.push({ group, total: groupTotal });
+
+      const cardsHtml = defs
+        .map((def) => buildLineCountProcessCard(def, results[def.key]))
+        .join("");
+      return (
+        '<div class="process-section-header">' +
+        '<span class="process-section-title">' +
+        esc(group) +
+        "</span>" +
+        '<span class="process-section-total">' +
+        groupTotal +
+        " os.</span>" +
+        "</div>" +
+        '<div class="process-cards">' +
+        cardsHtml +
+        "</div>"
+      );
+    })
     .join("");
+
+  const grandTotal = round(
+    groupTotals.reduce((sum, g) => sum + g.total, 0),
+    2,
+  );
+  const summaryHtml =
+    '<div class="process-summary-bar">' +
+    groupTotals
+      .map((g) => buildSummaryItem(esc(g.group), g.total, false))
+      .join("") +
+    buildSummaryItem("FTE Łącznie", grandTotal, true) +
+    "</div>";
 
   // Debug — ilość linii jest liczona identycznie dla procesów dzielących ten sam
   // filtr (filterGroup), więc panel diagnostyczny pokazujemy raz na grupę filtrów
   // (np. osobno dla OUT i osobno dla CHECK&PACK, bo mają różny LINE_STATUS).
-  const seenGroups = new Set();
+  const seenFilterGroups = new Set();
   const debugHtml = availableDefs
     .filter((def) => {
-      if (seenGroups.has(def.filterGroup)) return false;
-      seenGroups.add(def.filterGroup);
+      if (seenFilterGroups.has(def.filterGroup)) return false;
+      seenFilterGroups.add(def.filterGroup);
       return true;
     })
     .map((def) => buildForecastDebugBlock(def.filterGroup, results[def.key]))
     .join("");
 
-  wrap.innerHTML = '<div class="process-cards">' + cardsHtml + "</div>" + debugHtml;
+  wrap.innerHTML =
+    '<div class="processes-layout">' +
+    summaryHtml +
+    sectionsHtml +
+    debugHtml +
+    "</div>";
 }
 
-function buildLineCountProcessCard(def, resultObj) {
-  const totalFte = round(
+function sumClientsFte(resultObj) {
+  return round(
     resultObj.clients.reduce((sum, c) => sum + c.fte, 0),
     2,
   );
+}
+
+function buildLineCountProcessCard(def, resultObj) {
+  const totalFte = sumClientsFte(resultObj);
   const metricLabel = def.metric === "vasSum" ? "suma VAS" : "linii";
   const rows = resultObj.clients
     .map(
