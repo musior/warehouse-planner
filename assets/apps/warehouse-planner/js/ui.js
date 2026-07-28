@@ -1422,6 +1422,36 @@ function buildProcessCardPlaceholder(label) {
 // PLANOWANIE LUDZI
 // ─────────────────────────────────────────────────────────────────────────────
 
+function fteColorClass(exact) {
+  if (exact < 10) return "fte-green";
+  if (exact < 20) return "fte-amber";
+  if (exact <= 30) return "";
+  return "fte-red";
+}
+
+function fmtNum(v) {
+  return (v || 0).toLocaleString("pl-PL");
+}
+
+function volCard(label, value, unit, sub) {
+  return (
+    '<div class="staffing-vol-card">' +
+    '<div class="staffing-vol-label">' +
+    esc(label) +
+    "</div>" +
+    '<div class="staffing-vol-value">' +
+    fmtNum(value) +
+    "</div>" +
+    '<div class="staffing-vol-unit">' +
+    esc(unit) +
+    "</div>" +
+    '<div class="staffing-vol-sub">' +
+    esc(sub) +
+    "</div>" +
+    "</div>"
+  );
+}
+
 export function renderStaffingTab(staffing) {
   const wrap = document.getElementById("staffing-content");
   if (!wrap) return;
@@ -1431,36 +1461,6 @@ export function renderStaffingTab(staffing) {
       '<div class="empty-state"><div class="empty-icon">&#128101;</div>' +
       '<div class="empty-text">Wczytaj dane aby zobaczyć planowanie</div></div>';
     return;
-  }
-
-  function fteColorClass(exact) {
-    if (exact < 10) return "fte-green";
-    if (exact < 20) return "fte-amber";
-    if (exact <= 30) return "";
-    return "fte-red";
-  }
-
-  function fmtNum(v) {
-    return (v || 0).toLocaleString("pl-PL");
-  }
-
-  function volCard(label, value, unit, sub) {
-    return (
-      '<div class="staffing-vol-card">' +
-      '<div class="staffing-vol-label">' +
-      esc(label) +
-      "</div>" +
-      '<div class="staffing-vol-value">' +
-      fmtNum(value) +
-      "</div>" +
-      '<div class="staffing-vol-unit">' +
-      esc(unit) +
-      "</div>" +
-      '<div class="staffing-vol-sub">' +
-      esc(sub) +
-      "</div>" +
-      "</div>"
-    );
   }
 
   const colorCls = fteColorClass(staffing.totalPeople);
@@ -1524,6 +1524,51 @@ export function renderStaffingTab(staffing) {
     "</div>";
 }
 
+export function renderOutboundStaffingTab(totals) {
+  const wrap = document.getElementById("outbound-staffing-content");
+  if (!wrap) return;
+
+  if (!totals) {
+    wrap.innerHTML =
+      '<div class="empty-state"><div class="empty-icon">&#128101;</div>' +
+      '<div class="empty-text">Wczytaj dane Outbound, aby zobaczyć planowanie</div></div>';
+    return;
+  }
+
+  const { totalFte, fte3m, fteSolventum, lineCount3m, lineCountSolventum } = totals;
+  const colorCls = fteColorClass(totalFte);
+
+  wrap.innerHTML =
+    '<div class="staffing-total-row">' +
+    '<div class="staffing-fte-hero' +
+    (colorCls ? " " + colorCls : "") +
+    '">' +
+    '<div class="staffing-fte-hero-label">FTE Total</div>' +
+    '<div class="staffing-fte-hero-value">' +
+    totalFte +
+    "</div>" +
+    "</div>" +
+    "</div>" +
+    '<div class="staffing-fte-row">' +
+    '<div class="staffing-fte-card staffing-inbound">' +
+    '<div class="staffing-fte-label">FTE 3M</div>' +
+    '<div class="staffing-fte-value">' +
+    fte3m +
+    "</div>" +
+    "</div>" +
+    '<div class="staffing-fte-card staffing-magazyn">' +
+    '<div class="staffing-fte-label">FTE Solventum</div>' +
+    '<div class="staffing-fte-value">' +
+    fteSolventum +
+    "</div>" +
+    "</div>" +
+    "</div>" +
+    '<div class="staffing-vol-row staffing-vol-row--outbound">' +
+    volCard("Linie Forecast", lineCount3m, "linii", "3M") +
+    volCard("Linie Forecast", lineCountSolventum, "linii", "Solventum") +
+    "</div>";
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // STRONA GŁÓWNA — KARTY DZIAŁÓW
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1531,28 +1576,19 @@ export function renderStaffingTab(staffing) {
 export function renderHomeCards({
   inboundModel,
   inboundStaffing,
-  outboundStaffing,
+  outboundTotalFte,
 }) {
-  renderDeptCardKpis(
-    "dept-card-kpis-inbound",
-    inboundModel,
-    inboundStaffing,
-    "Wczytaj pliki, aby zobaczyć wyniki",
-  );
-  renderDeptCardKpis(
-    "dept-card-kpis-outbound",
-    null,
-    outboundStaffing,
-    "Brak danych — funkcja w budowie",
-  );
+  renderInboundDeptCardKpis(inboundModel, inboundStaffing);
+  renderOutboundDeptCardKpis(outboundTotalFte);
 }
 
-function renderDeptCardKpis(elId, model, staffing, emptyText) {
-  const el = document.getElementById(elId);
+function renderInboundDeptCardKpis(model, staffing) {
+  const el = document.getElementById("dept-card-kpis-inbound");
   if (!el) return;
 
   if (!model || !staffing) {
-    el.innerHTML = '<div class="dept-card-empty">' + esc(emptyText) + "</div>";
+    el.innerHTML =
+      '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
     return;
   }
 
@@ -1568,6 +1604,25 @@ function renderDeptCardKpis(elId, model, staffing, emptyText) {
     (model.kpi?.totalTrucks ?? 0) +
     "</div>" +
     '<div class="dept-card-kpi-label">Transporty</div>' +
+    "</div>";
+}
+
+function renderOutboundDeptCardKpis(totalFte) {
+  const el = document.getElementById("dept-card-kpis-outbound");
+  if (!el) return;
+
+  if (totalFte === null || totalFte === undefined) {
+    el.innerHTML =
+      '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
+    return;
+  }
+
+  el.innerHTML =
+    '<div class="dept-card-kpi">' +
+    '<div class="dept-card-kpi-value">' +
+    totalFte +
+    "</div>" +
+    '<div class="dept-card-kpi-label">FTE Total</div>' +
     "</div>";
 }
 
