@@ -1636,25 +1636,8 @@ export function renderOutboundProcessesTab(results) {
     buildSummaryItem("FTE Łącznie", grandTotal, true) +
     "</div>";
 
-  // Debug — ilość linii jest liczona identycznie dla procesów dzielących ten sam
-  // filtr (filterGroup), więc panel diagnostyczny pokazujemy raz na grupę filtrów
-  // (np. osobno dla OUT i osobno dla CHECK&PACK, bo mają różny LINE_STATUS).
-  const seenFilterGroups = new Set();
-  const debugHtml = availableDefs
-    .filter((def) => {
-      if (seenFilterGroups.has(def.filterGroup)) return false;
-      seenFilterGroups.add(def.filterGroup);
-      return true;
-    })
-    .map((def) => buildForecastDebugBlock(def.filterGroup, results[def.key]))
-    .join("");
-
   wrap.innerHTML =
-    '<div class="processes-layout">' +
-    summaryHtml +
-    sectionsHtml +
-    debugHtml +
-    "</div>";
+    '<div class="processes-layout">' + summaryHtml + sectionsHtml + "</div>";
 }
 
 function sumClientsFte(resultObj) {
@@ -1713,73 +1696,6 @@ function buildLineCountProcessCard(def, resultObj) {
     '<div class="process-card-breakdown">' +
     rows +
     "</div>" +
-    "</div>"
-  );
-}
-
-// TYMCZASOWE — panel diagnostyczny do weryfikacji formatu plików Forecast.
-// Do usunięcia, gdy potwierdzimy poprawność parsowania/filtrowania na realnych danych.
-function buildForecastDebugBlock(groupLabel, pbo) {
-  const dateRow = (label, d) =>
-    '<div class="process-breakdown-row"><span class="process-breakdown-label">' +
-    esc(label) +
-    '</span><span class="process-breakdown-value">' +
-    (d ? formatDate(d) : "—") +
-    "</span></div>";
-
-  const clientBlock = (c) => {
-    const d = c.debug;
-    const statuses = d.statusesSeen.length
-      ? d.statusesSeen
-          .map((s) => esc(s.status) + " (" + s.count + ")")
-          .join(", ")
-      : "— brak —";
-    const badSamples = d.badDateSamples.length
-      ? d.badDateSamples.map((s) => esc(String(s ?? ""))).join(" | ")
-      : "—";
-    return (
-      '<div class="debug-client-block">' +
-      '<div class="debug-client-title">' +
-      esc(c.client) +
-      "</div>" +
-      '<div class="process-breakdown-row"><span class="process-breakdown-label">Wierszy w pliku</span><span class="process-breakdown-value">' +
-      d.totalRows +
-      "</span></div>" +
-      '<div class="process-breakdown-row"><span class="process-breakdown-label">Niesparsowane daty</span><span class="process-breakdown-value">' +
-      d.unparsedDates +
-      "</span></div>" +
-      '<div class="process-breakdown-row"><span class="process-breakdown-label">Pasuje status</span><span class="process-breakdown-value">' +
-      d.statusMatch +
-      "</span></div>" +
-      '<div class="process-breakdown-row"><span class="process-breakdown-label">Pasuje data</span><span class="process-breakdown-value">' +
-      d.dateMatch +
-      "</span></div>" +
-      '<div class="process-breakdown-row"><span class="process-breakdown-label">Pasuje status + data</span><span class="process-breakdown-value">' +
-      d.bothMatch +
-      "</span></div>" +
-      '<div class="process-breakdown-row"><span class="process-breakdown-label">Suma VAS (pasujące)</span><span class="process-breakdown-value">' +
-      d.vasSum +
-      "</span></div>" +
-      '<div class="debug-freeform"><b>LINE_STATUS w pliku:</b> ' +
-      statuses +
-      "</div>" +
-      (d.unparsedDates > 0
-        ? '<div class="debug-freeform"><b>Przykłady niesparsowanych dat:</b> ' +
-          badSamples +
-          "</div>"
-        : "") +
-      "</div>"
-    );
-  };
-
-  return (
-    '<div class="debug-panel">' +
-    '<div class="debug-panel-title">Debug (tymczasowe) — filtr ' +
-    esc(groupLabel) +
-    "</div>" +
-    dateRow("Dzień planowania", pbo.planningDate) +
-    dateRow("Dzień dodatkowy (Polska)", pbo.extraDate) +
-    pbo.clients.map(clientBlock).join("") +
     "</div>"
   );
 }
