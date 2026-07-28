@@ -106,6 +106,14 @@ export const DEFAULT_OUTBOUND_INDICATORS = [
     value: 0.317995,
     standardTime: 0.6420,
   },
+  {
+    // VAS nie ma osobnego wskaźnika logistycznego — "wartość" jest nieużywana
+    // w obliczeniach (patrz processesOutbound.js, metric: "vasSum").
+    id: "vas",
+    label: "VAS",
+    value: 0,
+    standardTime: 0.12,
+  },
 ];
 
 function cloneDefaults() {
