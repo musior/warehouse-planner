@@ -162,6 +162,15 @@ const LINE_COUNT_PROCESSES = [
     statusSet: LINE_STATUS_CHECK_PACK,
     filterGroup: "CHECK&PACK",
   },
+  {
+    key: "vas",
+    indicatorId: "vas",
+    label: "VAS",
+    icon: "&#127991;",
+    statusSet: LINE_STATUS_VAS,
+    filterGroup: "VAS",
+    metric: "vasSum", // suma kolumny VAS z pasujących linii, bez mnożenia przez wskaźnik
+  },
 ];
 
 // Mianownik wzoru FTE (minuty dostępne w zmianie po odliczeniach) — na razie
@@ -188,6 +197,7 @@ function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
   let statusMatch = 0;
   let dateMatch = 0;
   let bothMatch = 0;
+  let vasSum = 0;
 
   for (const row of rows) {
     if (row.lineStatus) {
@@ -212,7 +222,10 @@ function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
 
     if (statusOk) statusMatch++;
     if (dateOk) dateMatch++;
-    if (statusOk && dateOk) bothMatch++;
+    if (statusOk && dateOk) {
+      bothMatch++;
+      vasSum += row.vas || 0;
+    }
   }
 
   return {
@@ -221,6 +234,7 @@ function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
     statusMatch,
     dateMatch,
     bothMatch,
+    vasSum: round(vasSum, 2),
     badDateSamples,
     statusesSeen: [...statusesSeen.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -250,25 +264,28 @@ function computeLineStatsForStatusSet({
 }
 
 /**
- * Buduje wynik dla pojedynczego procesu "ilość linii × wskaźnik", korzystając
- * ze wspólnie policzonej ilości linii (lineStats) i wskaźnika/czasu danego procesu.
+ * Buduje wynik dla pojedynczego procesu, korzystając ze wspólnie policzonych
+ * statystyk (lineStats) i wskaźnika/czasu danego procesu. Obsługuje dwie metryki:
+ * - "count"  — ilość linii × wskaźnik logistyczny (domyślne, większość procesów)
+ * - "vasSum" — suma kolumny VAS z pasujących linii, BEZ mnożenia przez wskaźnik
+ *   (proces VAS nie ma osobnego wskaźnika logistycznego — tylko czas standardowy)
  */
-function buildLineCountResult(
-  indicatorId,
-  indicators,
-  planningDate,
-  lineStats,
-) {
-  const indicator = indicators.find((i) => i.id === indicatorId) || {};
+function buildProcessResult(def, indicators, planningDate, lineStats) {
+  const indicator = indicators.find((i) => i.id === def.indicatorId) || {};
   const indicatorValue = indicator.value ?? 0;
   const standardTime = indicator.standardTime ?? 0;
+  const metric = def.metric || "count";
 
   const buildClient = (client, stats) => {
-    const result = round(stats.bothMatch * indicatorValue, 2);
+    const result =
+      metric === "vasSum"
+        ? round(stats.vasSum, 2)
+        : round(stats.bothMatch * indicatorValue, 2);
     const fte = round((result * standardTime) / OUTBOUND_FTE_DIVISOR, 2);
     return {
       client,
       lineCount: stats.bothMatch,
+      vasSum: stats.vasSum,
       indicatorValue,
       result,
       standardTime,
@@ -307,12 +324,7 @@ export function calcAllOutboundProcesses({
       });
       lineStatsByStatusSet.set(def.statusSet, lineStats);
     }
-    result[def.key] = buildLineCountResult(
-      def.indicatorId,
-      indicators,
-      planningDate,
-      lineStats,
-    );
+    result[def.key] = buildProcessResult(def, indicators, planningDate, lineStats);
   }
   return result;
 }
