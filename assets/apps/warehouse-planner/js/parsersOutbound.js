@@ -2,6 +2,8 @@
 // parsersOutbound.js — parsowanie plików wsadowych Outbound (Forecast 3M / Solventum)
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { toNumber } from './utils.js';
+
 export const FORECAST_REQUIRED_COLS = [
   'EXPECTED_SHIP_DATE',
   'LINE_STATUS',
@@ -44,7 +46,7 @@ export function parseForecastCsv(buffer, filename) {
       lineStatus:          (cells[colIndex.LINE_STATUS] || '').trim(),
       obd:                 (cells[colIndex.OBD] || '').trim(),
       nameCountry:         (cells[colIndex.NAME_COUNTRY] || '').trim(),
-      vas:                 (cells[colIndex.VAS] || '').trim(),
+      vas:                 toNumber(cells[colIndex.VAS]),   // liczba — sumowana dla procesu VAS
     });
   }
   return rows;
