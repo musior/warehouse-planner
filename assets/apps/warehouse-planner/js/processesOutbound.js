@@ -21,6 +21,30 @@ export const LINE_STATUS_CHECK_PACK = [
   "Waiting for consolidation",
 ];
 
+// Ikony — emoji tam gdzie jest dobry odpowiednik (offline, bez plików
+// zewnętrznych: renderowane z czcionki systemowej), SVG tam gdzie nie ma
+// pasującego emoji (wózek widłowy, wózek ręczny — rysowane wprost w kodzie).
+
+const ICON_PICKING = "&#128230;"; // 📦 karton — Picking
+
+// Wózek widłowy (Pallet Operations) — grafika dostarczona przez użytkownika,
+// zapisana lokalnie w assets/apps/warehouse-planner/icons/ (bez internetu).
+const ICON_FORKLIFT =
+  '<img src="/assets/apps/warehouse-planner/icons/pallet-operations.png" alt="">';
+
+// Wózek ręczny / paleciak (Loading): niskie widły + kółko + dyszel.
+const ICON_PALLET_JACK =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M3 16 L15 16 M3 17.3 L15 17.3"/>' +
+  '<circle cx="15.3" cy="18.6" r="1.3"/>' +
+  '<path d="M3 16.5 L3 8 Q3 5 6 4.3 L9.5 3"/>' +
+  "</svg>";
+
+const ICON_EXPORT_DOC = "&#129534;";     // 🧾 dokumenty eksportowe
+const ICON_FOILING = "&#127744;";        // 🌀 owijanie folią
+const ICON_PALLET_CHANGE = "&#128260;";  // 🔄 wymiana palety
+
 // Kolejność wyświetlania grup procesów w zakładce Procesy (Outbound).
 export const PROCESS_GROUP_ORDER = [
   "Picking",
@@ -42,7 +66,7 @@ const LINE_COUNT_PROCESSES = [
     key: "pickByOrder",
     indicatorId: "pick-by-order",
     label: "PICK BY ORDER",
-    icon: "&#128230;",
+    icon: ICON_PICKING,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Picking",
@@ -51,7 +75,7 @@ const LINE_COUNT_PROCESSES = [
     key: "pickByItem",
     indicatorId: "pick-by-item",
     label: "PICK BY ITEM",
-    icon: "&#128203;",
+    icon: ICON_PICKING,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Picking",
@@ -60,7 +84,7 @@ const LINE_COUNT_PROCESSES = [
     key: "pickByOrderMezzanine",
     indicatorId: "pick-by-order-mezzanine",
     label: "PICK BY ORDER / MEZZANINE",
-    icon: "&#127970;",
+    icon: ICON_PICKING,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Picking",
@@ -69,7 +93,7 @@ const LINE_COUNT_PROCESSES = [
     key: "pickByItemMezzanine",
     indicatorId: "pick-by-item-mezzanine",
     label: "PICK BY ITEM / MEZZANINE",
-    icon: "&#128194;",
+    icon: ICON_PICKING,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Picking",
@@ -78,7 +102,7 @@ const LINE_COUNT_PROCESSES = [
     key: "fullPalletsMission",
     indicatorId: "full-pallets-mission",
     label: "FULL PALLETS MISSION",
-    icon: "&#127919;",
+    icon: ICON_FORKLIFT,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Pallet Operations",
@@ -87,7 +111,7 @@ const LINE_COUNT_PROCESSES = [
     key: "replenishment",
     indicatorId: "replenishment",
     label: "REPLENISHMENT",
-    icon: "&#128230;",
+    icon: ICON_FORKLIFT,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Pallet Operations",
@@ -96,7 +120,7 @@ const LINE_COUNT_PROCESSES = [
     key: "transfer",
     indicatorId: "transfer",
     label: "TRANSFER",
-    icon: "&#128341;",
+    icon: ICON_FORKLIFT,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Pallet Operations",
@@ -105,7 +129,7 @@ const LINE_COUNT_PROCESSES = [
     key: "palletsFoiling",
     indicatorId: "pallets-foiling",
     label: "PALLETS FOILING - DG & CROSS",
-    icon: "&#129963;",
+    icon: ICON_FOILING,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Others",
@@ -114,7 +138,7 @@ const LINE_COUNT_PROCESSES = [
     key: "palletsLoading",
     indicatorId: "pallets-loading",
     label: "PALLETS LOADING - DG",
-    icon: "&#128333;",
+    icon: ICON_PALLET_JACK,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Loading",
@@ -123,7 +147,7 @@ const LINE_COUNT_PROCESSES = [
     key: "boxesLoading",
     indicatorId: "boxes-loading",
     label: "BOXES LOADING - DG",
-    icon: "&#128111;",
+    icon: ICON_PALLET_JACK,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Loading",
@@ -132,7 +156,7 @@ const LINE_COUNT_PROCESSES = [
     key: "palletsLoadingXDock",
     indicatorId: "pallets-loading-xdock",
     label: "PALLETS LOADING (XDOCK)",
-    icon: "&#128222;",
+    icon: ICON_PALLET_JACK,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Loading",
@@ -141,7 +165,7 @@ const LINE_COUNT_PROCESSES = [
     key: "boxesLoadingXDock",
     indicatorId: "boxes-loading-xdock",
     label: "BOXES LOADING (XDOCK)",
-    icon: "&#128948;",
+    icon: ICON_PALLET_JACK,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Loading",
@@ -150,7 +174,7 @@ const LINE_COUNT_PROCESSES = [
     key: "palletChange",
     indicatorId: "pallet-change",
     label: "PALLET CHANGE",
-    icon: "&#113944;",
+    icon: ICON_PALLET_CHANGE,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Others",
@@ -159,7 +183,7 @@ const LINE_COUNT_PROCESSES = [
     key: "exports",
     indicatorId: "exports",
     label: "EXPORTS",
-    icon: "&#128230;",
+    icon: ICON_EXPORT_DOC,
     statusSet: LINE_STATUS_OUT,
     filterGroup: "OUT",
     group: "Exports",
