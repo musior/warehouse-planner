@@ -1438,6 +1438,19 @@ body {
 
 .process-card-icon {
   font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-2);
+}
+.process-card-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.process-card-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
 }
 .process-card-label {
   font-size: 13px;
