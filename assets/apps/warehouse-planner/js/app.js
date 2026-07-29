@@ -14,7 +14,8 @@ import { tomorrow, today, formatDate, isSameDay } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
 import { loadOutboundIndicators, setOutboundIndicatorField } from './outboundIndicators.js';
 import { parseForecastCsv }                      from './parsersOutbound.js';
-import { calcAllOutboundProcesses, sumOutboundFteByClient } from './processesOutbound.js';
+import { calcAllOutboundProcesses, sumOutboundFteByClient,
+         getDefaultOutboundPlanningDate }                from './processesOutbound.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
@@ -34,6 +35,7 @@ const state = {
     forecast3m:        null,
     forecastSolventum: null,
     processes:         null,
+    planningDate:      getDefaultOutboundPlanningDate(),
   },
 };
 
@@ -63,8 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setupTruckSelection();
   setupHomeNavigation();
   setupOutboundIndicators();
+  setupOutboundDateBar();
 
   applyDateToInputs();
+  applyOutboundDateToInput();
   renderEmpty();
   renderTimesTab();
   renderOutboundIndicatorsTab(state.outbound.indicators);
@@ -90,6 +94,46 @@ function setupOutboundIndicators() {
     state.outbound.indicators = setOutboundIndicatorField(state.outbound.indicators, id, field, value);
     recomputeOutboundProcesses();
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OUTBOUND — DZIEŃ PLANOWANIA
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupOutboundDateBar() {
+  const input = document.getElementById('outbound-planning-date');
+  const btnReset = document.getElementById('btn-outbound-date-reset');
+
+  input?.addEventListener('change', () => {
+    const d = parseDateInput(input.value);
+    if (!d) return;
+    state.outbound.planningDate = d;
+    updateOutboundDateBarSummary();
+    recomputeOutboundProcesses();
+  });
+
+  btnReset?.addEventListener('click', () => {
+    state.outbound.planningDate = getDefaultOutboundPlanningDate();
+    applyOutboundDateToInput();
+    recomputeOutboundProcesses();
+  });
+}
+
+function applyOutboundDateToInput() {
+  const input = document.getElementById('outbound-planning-date');
+  if (input && state.outbound.planningDate) {
+    input.value = toInputDate(state.outbound.planningDate);
+  }
+  updateOutboundDateBarSummary();
+}
+
+function updateOutboundDateBarSummary() {
+  const el = document.getElementById('outbound-date-bar-summary');
+  if (!el || !state.outbound.planningDate) return;
+  const isDefault = isSameDay(state.outbound.planningDate, getDefaultOutboundPlanningDate());
+  el.textContent = isDefault
+    ? `Planowanie na: ${formatDate(state.outbound.planningDate)} (domyślny)`
+    : `Planowanie na: ${formatDate(state.outbound.planningDate)}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -556,15 +600,12 @@ function recomputeOutboundProcesses() {
     forecast3m:        state.outbound.forecast3m,
     forecastSolventum: state.outbound.forecastSolventum,
     indicators:        state.outbound.indicators,
+    planningDate:      state.outbound.planningDate,
   });
   renderOutboundProcessesTab(state.outbound.processes);
 
   const totals = sumOutboundFteByClient(state.outbound.processes);
-  renderOutboundStaffingTab({
-    ...totals,
-    lineCount3m:        (state.outbound.forecast3m        || []).length,
-    lineCountSolventum: (state.outbound.forecastSolventum || []).length,
-  });
+  renderOutboundStaffingTab(totals);
 
   renderHomeCards({
     inboundModel:     state.model,
