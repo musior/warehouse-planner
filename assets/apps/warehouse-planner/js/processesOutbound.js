@@ -300,12 +300,19 @@ function buildProcessResult(def, indicators, planningDate, lineStats) {
   };
 }
 
+// Domyślny dzień planowania — najbliższy dzień roboczy po dzisiejszym.
+// Wystawione jako funkcja (nie stała), żeby zawsze liczyć względem aktualnego "dziś".
+export function getDefaultOutboundPlanningDate() {
+  return nextBusinessDay(today());
+}
+
 export function calcAllOutboundProcesses({
   forecast3m,
   forecastSolventum,
   indicators,
+  planningDate,
 }) {
-  const planningDate = nextBusinessDay(today());
+  planningDate = planningDate || getDefaultOutboundPlanningDate();
   const lineStatsByStatusSet = new Map(); // statusSet (referencja) -> lineStats
 
   const result = { planningDate };
@@ -327,6 +334,9 @@ export function calcAllOutboundProcesses({
 
 /**
  * Sumuje FTE ze wszystkich procesów Outbound — łącznie i per klient (3M / Solventum).
+ * Dolicza też reprezentatywną liczbę linii Forecast (filtr OUT — najliczniejsza
+ * grupa procesów), żeby "ilość linii" na przeglądzie reagowała na zmianę dnia
+ * planowania dokładnie tak samo jak FTE, zamiast pokazywać stały rozmiar pliku.
  * Używane na karcie działu na stronie głównej i w zakładce Planowanie ludzi.
  */
 export function sumOutboundFteByClient(processesResult) {
@@ -344,10 +354,19 @@ export function sumOutboundFteByClient(processesResult) {
     }
   }
 
+  const outDef = LINE_COUNT_PROCESSES.find((def) => def.filterGroup === "OUT");
+  const outResult = outDef ? processesResult?.[outDef.key] : null;
+  const lineCount3m =
+    outResult?.clients.find((c) => c.client === "3M")?.lineCount ?? 0;
+  const lineCountSolventum =
+    outResult?.clients.find((c) => c.client === "Solventum")?.lineCount ?? 0;
+
   return {
     totalFte: round(totalFte, 2),
     fte3m: round(fte3m, 2),
     fteSolventum: round(fteSolventum, 2),
+    lineCount3m,
+    lineCountSolventum,
   };
 }
 
