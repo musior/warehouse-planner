@@ -1564,8 +1564,8 @@ export function renderOutboundStaffingTab(totals) {
     "</div>" +
     "</div>" +
     '<div class="staffing-vol-row staffing-vol-row--outbound">' +
-    volCard("Linie Forecast", lineCount3m, "linii", "3M") +
-    volCard("Linie Forecast", lineCountSolventum, "linii", "Solventum") +
+    volCard("Linie Forecast", lineCount3m, "linii", "3M — na dzień planowania") +
+    volCard("Linie Forecast", lineCountSolventum, "linii", "Solventum — na dzień planowania") +
     "</div>";
 }
 
