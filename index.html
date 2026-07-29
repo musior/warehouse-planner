@@ -336,6 +336,24 @@
     </div>
 
     <div id="dept-outbound" class="dept-view hidden">
+      <!-- PASEK DATY PLANOWANIA -->
+      <div class="date-bar">
+        <div class="date-bar-left">
+          <label class="date-label">Dzień planowania:</label>
+          <input type="date" id="outbound-planning-date" class="date-input" />
+          <button
+            class="btn btn-outline"
+            id="btn-outbound-date-reset"
+            title="Przywróć domyślny dzień planowania (najbliższy dzień roboczy)"
+          >
+            Domyślny
+          </button>
+        </div>
+        <div class="date-bar-right">
+          <span id="outbound-date-bar-summary" class="date-bar-summary"></span>
+        </div>
+      </div>
+
       <nav class="tabs-nav">
         <button class="tab active" data-tab="outbound-staffing">Planowanie ludzi</button>
         <button class="tab" data-tab="outbound-processes">Procesy</button>
