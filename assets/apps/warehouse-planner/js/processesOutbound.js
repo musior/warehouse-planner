@@ -21,29 +21,18 @@ export const LINE_STATUS_CHECK_PACK = [
   "Waiting for consolidation",
 ];
 
-// Ikony — emoji tam gdzie jest dobry odpowiednik (offline, bez plików
-// zewnętrznych: renderowane z czcionki systemowej), SVG tam gdzie nie ma
-// pasującego emoji (wózek widłowy, wózek ręczny — rysowane wprost w kodzie).
-
 const ICON_PICKING = "&#128230;"; // 📦 karton — Picking
 
-// Wózek widłowy (Pallet Operations) — grafika dostarczona przez użytkownika,
-// zapisana lokalnie w assets/apps/warehouse-planner/icons/ (bez internetu).
 const ICON_FORKLIFT =
   '<img src="/assets/apps/warehouse-planner/icons/pallet-operations.png" alt="">';
 
-// Wózek ręczny / paleciak (Loading): niskie widły + kółko + dyszel.
 const ICON_PALLET_JACK =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
-  'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
-  '<path d="M3 16 L15 16 M3 17.3 L15 17.3"/>' +
-  '<circle cx="15.3" cy="18.6" r="1.3"/>' +
-  '<path d="M3 16.5 L3 8 Q3 5 6 4.3 L9.5 3"/>' +
-  "</svg>";
+  '<img src="/assets/apps/warehouse-planner/icons/loading.png" alt="">';
 
-const ICON_EXPORT_DOC = "&#129534;";     // 🧾 dokumenty eksportowe
-const ICON_FOILING = "&#127744;";        // 🌀 owijanie folią
-const ICON_PALLET_CHANGE = "&#128260;";  // 🔄 wymiana palety
+const ICON_EXPORT_DOC = "&#129534;";
+const ICON_FOILING = "&#127744;";
+const ICON_PALLET_CHANGE = "&#128260;";
+const ICON_VAS = "🏷️";
 
 // Kolejność wyświetlania grup procesów w zakładce Procesy (Outbound).
 export const PROCESS_GROUP_ORDER = [
@@ -219,7 +208,7 @@ const LINE_COUNT_PROCESSES = [
     key: "vas",
     indicatorId: "vas",
     label: "VAS",
-    icon: "&#127991;",
+    icon: ICON_VAS,
     statusSet: LINE_STATUS_VAS,
     filterGroup: "VAS",
     metric: "vasSum", // suma kolumny VAS z pasujących linii, bez mnożenia przez wskaźnik
@@ -351,7 +340,12 @@ export function calcAllOutboundProcesses({
       });
       lineStatsByStatusSet.set(def.statusSet, lineStats);
     }
-    result[def.key] = buildProcessResult(def, indicators, planningDate, lineStats);
+    result[def.key] = buildProcessResult(
+      def,
+      indicators,
+      planningDate,
+      lineStats,
+    );
   }
   return result;
 }
