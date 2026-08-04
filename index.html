@@ -16,11 +16,13 @@
     <!-- TOP BAR -->
     <header class="topbar">
       <div class="topbar-left">
-        <div class="topbar-logo">&#9664;&#9654;</div>
-        <div class="topbar-title-group">
-          <span class="topbar-title">Planowanie Zasobów</span>
-          <span class="topbar-sub">Magazyn inbound</span>
-        </div>
+        <button class="topbar-title-group" id="btn-go-home" title="Wróć do strony głównej">
+          <div class="topbar-logo">&#9664;&#9654;</div>
+          <div class="topbar-title-text">
+            <span class="topbar-title">Planowanie Zasobów</span>
+            <span class="topbar-sub" id="topbar-sub">Wybierz dział</span>
+          </div>
+        </button>
       </div>
       <div class="topbar-right">
         <span id="data-summary" class="data-summary"></span>
@@ -29,6 +31,32 @@
         </button>
       </div>
     </header>
+
+    <!-- STRONA GŁÓWNA — WYBÓR DZIAŁU -->
+    <div id="home-view" class="home-view">
+      <div class="home-view-inner">
+        <h1 class="home-title">Planowanie Zasobów</h1>
+        <p class="home-subtitle">Wybierz dział, aby zobaczyć szczegóły planowania</p>
+        <div class="dept-cards">
+          <button class="dept-card" data-dept="inbound">
+            <div class="dept-card-icon">&#128230;</div>
+            <div class="dept-card-name">Inbound</div>
+            <div class="dept-card-desc">Przyjęcie towaru na magazyn</div>
+            <div class="dept-card-kpis" id="dept-card-kpis-inbound">
+              <div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>
+            </div>
+          </button>
+          <button class="dept-card dept-card--placeholder" data-dept="outbound">
+            <div class="dept-card-icon">&#128666;</div>
+            <div class="dept-card-name">Outbound</div>
+            <div class="dept-card-desc">Wysyłka towaru z magazynu</div>
+            <div class="dept-card-kpis" id="dept-card-kpis-outbound">
+              <div class="dept-card-empty">Brak danych — funkcja w budowie</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- UPLOAD OVERLAY -->
     <div id="upload-overlay" class="upload-overlay hidden">
@@ -41,30 +69,54 @@
           Przeciągnij pliki na sloty lub kliknij aby wybrać. Dane są
           przetwarzane lokalnie w przeglądarce.
         </p>
-        <div class="upload-slots">
-          <div class="upload-slot" id="slot-awizacje">
-            <input type="file" accept=".xlsx,.xls" class="slot-input" />
-            <div class="slot-icon">&#128196;</div>
-            <div class="slot-label">Awizacje</div>
-            <div class="slot-format">.xlsx</div>
-            <div class="slot-filename"></div>
-            <div class="slot-status-icon"></div>
+        <div class="upload-section">
+          <h3 class="upload-section-title">Inbound</h3>
+          <div class="upload-slots">
+            <div class="upload-slot" id="slot-awizacje">
+              <input type="file" accept=".xlsx,.xls" class="slot-input" />
+              <div class="slot-icon">&#128196;</div>
+              <div class="slot-label">Awizacje</div>
+              <div class="slot-format">.xlsx</div>
+              <div class="slot-filename"></div>
+              <div class="slot-status-icon"></div>
+            </div>
+            <div class="upload-slot" id="slot-sscc-inbound">
+              <input type="file" accept=".csv" class="slot-input" />
+              <div class="slot-icon">&#128666;</div>
+              <div class="slot-label">SSCC Inbound</div>
+              <div class="slot-format">Jadące · .csv</div>
+              <div class="slot-filename"></div>
+              <div class="slot-status-icon"></div>
+            </div>
+            <div class="upload-slot" id="slot-sscc-arrived">
+              <input type="file" accept=".csv" class="slot-input" />
+              <div class="slot-icon">&#128230;</div>
+              <div class="slot-label">SSCC Przybyłe</div>
+              <div class="slot-format">Przybyłe · .csv</div>
+              <div class="slot-filename"></div>
+              <div class="slot-status-icon"></div>
+            </div>
           </div>
-          <div class="upload-slot" id="slot-sscc-inbound">
-            <input type="file" accept=".csv" class="slot-input" />
-            <div class="slot-icon">&#128666;</div>
-            <div class="slot-label">SSCC Inbound</div>
-            <div class="slot-format">Jadące · .csv</div>
-            <div class="slot-filename"></div>
-            <div class="slot-status-icon"></div>
-          </div>
-          <div class="upload-slot" id="slot-sscc-arrived">
-            <input type="file" accept=".csv" class="slot-input" />
-            <div class="slot-icon">&#128230;</div>
-            <div class="slot-label">SSCC Outbound</div>
-            <div class="slot-format">Przybyłe · .csv</div>
-            <div class="slot-filename"></div>
-            <div class="slot-status-icon"></div>
+        </div>
+        <div class="upload-section">
+          <h3 class="upload-section-title">Outbound</h3>
+          <div class="upload-slots">
+            <div class="upload-slot" id="slot-outbound-forecast-3m">
+              <input type="file" accept=".csv" class="slot-input" />
+              <div class="slot-icon">&#128230;</div>
+              <div class="slot-label">Forecast 3M</div>
+              <div class="slot-format">.csv</div>
+              <div class="slot-filename"></div>
+              <div class="slot-status-icon"></div>
+            </div>
+            <div class="upload-slot" id="slot-outbound-forecast-solventum">
+              <input type="file" accept=".csv" class="slot-input" />
+              <div class="slot-icon">&#128230;</div>
+              <div class="slot-label">Forecast Solventum</div>
+              <div class="slot-format">.csv</div>
+              <div class="slot-filename"></div>
+              <div class="slot-status-icon"></div>
+            </div>
           </div>
         </div>
         <div class="file-status-row">
@@ -82,7 +134,19 @@
             <span class="file-status-icon" id="file-status-sscc-arrived"
               >○</span
             >
-            SSCC Outbound
+            SSCC Przybyłe
+          </div>
+          <div class="file-status-item">
+            <span class="file-status-icon" id="file-status-outbound-forecast-3m"
+              >○</span
+            >
+            Forecast 3M
+          </div>
+          <div class="file-status-item">
+            <span class="file-status-icon" id="file-status-outbound-forecast-solventum"
+              >○</span
+            >
+            Forecast Solventum
           </div>
         </div>
         <div class="upload-panel-footer">
@@ -94,7 +158,8 @@
     </div>
 
     <!-- MAIN -->
-    <main class="main-layout">
+    <main class="main-layout hidden" id="main-layout">
+    <div id="dept-inbound" class="dept-view">
       <!-- PASEK DATY I FILTRÓW -->
       <div class="date-bar">
         <div class="date-bar-left">
@@ -268,6 +333,68 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div id="dept-outbound" class="dept-view hidden">
+      <!-- PASEK DATY PLANOWANIA -->
+      <div class="date-bar">
+        <div class="date-bar-left">
+          <label class="date-label">Dzień planowania:</label>
+          <input type="date" id="outbound-planning-date" class="date-input" />
+          <button
+            class="btn btn-outline"
+            id="btn-outbound-date-reset"
+            title="Przywróć domyślny dzień planowania (najbliższy dzień roboczy)"
+          >
+            Domyślny
+          </button>
+        </div>
+        <div class="date-bar-right">
+          <span id="outbound-date-bar-summary" class="date-bar-summary"></span>
+        </div>
+      </div>
+
+      <nav class="tabs-nav">
+        <button class="tab active" data-tab="outbound-staffing">Planowanie ludzi</button>
+        <button class="tab" data-tab="outbound-processes">Procesy</button>
+        <button class="tab" data-tab="outbound-indicators">Wskaźniki logistyczne</button>
+      </nav>
+
+      <!-- OUTBOUND — PLANOWANIE LUDZI -->
+      <div class="tab-panel" data-panel="outbound-staffing">
+        <div id="outbound-staffing-content">
+          <div class="empty-state">
+            <div class="empty-icon">&#128101;</div>
+            <div class="empty-text">Wczytaj dane Outbound, aby zobaczyć planowanie</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTBOUND — PROCESY -->
+      <div class="tab-panel hidden" data-panel="outbound-processes">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Procesy — zapotrzebowanie na ludzi</span>
+          </div>
+          <div id="outbound-processes-content">
+            <div class="empty-state">
+              <div class="empty-icon">&#9881;</div>
+              <div class="empty-text">Wczytaj dane Outbound, aby zobaczyć obliczenia</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTBOUND — WSKAŹNIKI LOGISTYCZNE -->
+      <div class="tab-panel hidden" data-panel="outbound-indicators">
+        <div class="panel panel--fit">
+          <div class="panel-header">
+            <span class="panel-title">Wskaźniki logistyczne</span>
+          </div>
+          <div id="outbound-indicators-content"></div>
+        </div>
+      </div>
+    </div>
     </main>
 
     <script

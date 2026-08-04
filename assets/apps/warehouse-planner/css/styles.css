@@ -97,6 +97,20 @@ body {
 
 .topbar-title-group {
   display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.topbar-title-group:hover {
+  background: var(--bg-hover);
+}
+.topbar-title-text {
+  display: flex;
   flex-direction: column;
   gap: 1px;
 }
@@ -172,6 +186,103 @@ body {
   background: var(--bg-hover);
 }
 
+/* ── Home View (wybór działu) ─────────────────────────────────────────────── */
+.home-view {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 60px 20px;
+}
+.home-view.hidden {
+  display: none;
+}
+
+.home-view-inner {
+  text-align: center;
+}
+
+.home-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+.home-subtitle {
+  font-size: 14px;
+  color: var(--text-2);
+  margin-bottom: 36px;
+}
+
+.dept-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.dept-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 28px 20px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
+}
+.dept-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--blue);
+  transform: translateY(-2px);
+}
+
+.dept-card--placeholder:hover {
+  border-color: var(--border-md);
+}
+
+.dept-card-icon {
+  font-size: 30px;
+  margin-bottom: 8px;
+}
+.dept-card-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.dept-card-desc {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 18px;
+}
+
+.dept-card-kpis {
+  display: flex;
+  gap: 16px;
+  min-height: 48px;
+  align-items: center;
+}
+.dept-card-empty {
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+}
+.dept-card-kpi-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.dept-card-kpi-label {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+@media (max-width: 640px) {
+  .dept-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Upload Overlay ───────────────────────────────────────────────────────── */
 .upload-overlay {
   position: fixed;
@@ -212,6 +323,18 @@ body {
   color: var(--text-2);
   margin-bottom: 20px;
   line-height: 1.6;
+}
+
+.upload-section {
+  margin-bottom: 8px;
+}
+.upload-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  margin-bottom: 8px;
 }
 
 .upload-slots {
@@ -337,6 +460,13 @@ body {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 20px 40px;
+}
+.main-layout.hidden {
+  display: none;
+}
+
+.dept-view.hidden {
+  display: none;
 }
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
@@ -1308,6 +1438,19 @@ body {
 
 .process-card-icon {
   font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-2);
+}
+.process-card-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.process-card-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
 }
 .process-card-label {
   font-size: 13px;
@@ -1591,8 +1734,35 @@ body {
   font-size: 11px;
 }
 
+/* ── Zakładka: Wskaźniki logistyczne (Outbound) ───────────────────────────── */
+.indicators-table {
+  min-width: 0;
+  max-width: 560px;
+}
+.indicators-table tr.indicators-spacer-row td {
+  padding: 6px 0;
+  border-bottom: none;
+}
+.indicator-input {
+  width: 100px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-1);
+  background: var(--bg-card);
+}
+.indicator-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: var(--blue-bg);
+}
+
 /* ── Zakładka: Planowanie ludzi ───────────────────────────────────────────── */
-#staffing-content {
+#staffing-content,
+#outbound-staffing-content {
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1750,6 +1920,9 @@ body {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
+}
+.staffing-vol-row.staffing-vol-row--outbound {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .staffing-vol-card {

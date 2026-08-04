@@ -7,9 +7,15 @@ import { parseSSCCCsv, parseSSCCOutboundCsv, parseAwizacjeXlsx,
 import { buildModel, getLatestAwizacjeDate, buildKpiForSelection } from './dataModel.js';
 import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
          renderProcessesTab, renderTimesTab, renderStaffingTab,
-         updateFileStatus, updateSlotUI } from './ui.js';
+         updateFileStatus, updateSlotUI, renderHomeCards,
+         renderOutboundIndicatorsTab, renderOutboundProcessesTab,
+         renderOutboundStaffingTab } from './ui.js';
 import { tomorrow, today, formatDate, isSameDay } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
+import { loadOutboundIndicators, setOutboundIndicatorField } from './outboundIndicators.js';
+import { parseForecastCsv }                      from './parsersOutbound.js';
+import { calcAllOutboundProcesses, sumOutboundFteByClient,
+         getDefaultOutboundPlanningDate }                from './processesOutbound.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
@@ -22,7 +28,21 @@ const state = {
   filterDateFrom:  null,
   filterDateTo:    null,
   selectedSisSet:  null,   // null = wszystkie zaznaczone
+
+  currentDepartment: null,          // null (strona główna) | 'inbound' | 'outbound'
+  outbound: {
+    indicators:        loadOutboundIndicators(),  // wskaźniki logistyczne — localStorage (na razie)
+    forecast3m:        null,
+    forecastSolventum: null,
+    processes:         null,
+    planningDate:      getDefaultOutboundPlanningDate(),
+  },
 };
+
+function getOutboundTotalFte() {
+  if (!state.outbound.processes) return null;
+  return sumOutboundFteByClient(state.outbound.processes).totalFte;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // START
@@ -43,11 +63,112 @@ document.addEventListener('DOMContentLoaded', () => {
   setupTruckFilters();
   setupSearchBoxes();
   setupTruckSelection();
+  setupHomeNavigation();
+  setupOutboundIndicators();
+  setupOutboundDateBar();
 
   applyDateToInputs();
+  applyOutboundDateToInput();
   renderEmpty();
   renderTimesTab();
+  renderOutboundIndicatorsTab(state.outbound.indicators);
+  renderHomeCards({ inboundModel: null, inboundStaffing: null, outboundTotalFte: null });
+  showHome();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OUTBOUND — WSKAŹNIKI LOGISTYCZNE
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupOutboundIndicators() {
+  document.addEventListener('change', e => {
+    const isValue        = e.target.classList.contains('indicator-input');
+    const isStandardTime = e.target.classList.contains('indicator-standard-time-input');
+    if (!isValue && !isStandardTime) return;
+
+    const id    = e.target.dataset.id;
+    const value = parseFloat(e.target.value.replace(',', '.'));
+    if (!Number.isFinite(value)) return;
+
+    const field = isValue ? 'value' : 'standardTime';
+    state.outbound.indicators = setOutboundIndicatorField(state.outbound.indicators, id, field, value);
+    recomputeOutboundProcesses();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OUTBOUND — DZIEŃ PLANOWANIA
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupOutboundDateBar() {
+  const input = document.getElementById('outbound-planning-date');
+  const btnReset = document.getElementById('btn-outbound-date-reset');
+
+  input?.addEventListener('change', () => {
+    const d = parseDateInput(input.value);
+    if (!d) return;
+    state.outbound.planningDate = d;
+    updateOutboundDateBarSummary();
+    recomputeOutboundProcesses();
+  });
+
+  btnReset?.addEventListener('click', () => {
+    state.outbound.planningDate = getDefaultOutboundPlanningDate();
+    applyOutboundDateToInput();
+    recomputeOutboundProcesses();
+  });
+}
+
+function applyOutboundDateToInput() {
+  const input = document.getElementById('outbound-planning-date');
+  if (input && state.outbound.planningDate) {
+    input.value = toInputDate(state.outbound.planningDate);
+  }
+  updateOutboundDateBarSummary();
+}
+
+function updateOutboundDateBarSummary() {
+  const el = document.getElementById('outbound-date-bar-summary');
+  if (!el || !state.outbound.planningDate) return;
+  const isDefault = isSameDay(state.outbound.planningDate, getDefaultOutboundPlanningDate());
+  el.textContent = isDefault
+    ? `Planowanie na: ${formatDate(state.outbound.planningDate)} (domyślny)`
+    : `Planowanie na: ${formatDate(state.outbound.planningDate)}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STRONA GŁÓWNA / NAWIGACJA MIĘDZY DZIAŁAMI
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupHomeNavigation() {
+  document.querySelectorAll('.dept-card').forEach(card => {
+    card.addEventListener('click', () => showDepartment(card.dataset.dept));
+  });
+  document.getElementById('btn-go-home')?.addEventListener('click', showHome);
+}
+
+function showHome() {
+  state.currentDepartment = null;
+  document.getElementById('home-view')?.classList.remove('hidden');
+  document.getElementById('main-layout')?.classList.add('hidden');
+  const sub = document.getElementById('topbar-sub');
+  if (sub) sub.textContent = 'Wybierz dział';
+  renderHomeCards({
+    inboundModel:     state.model,
+    inboundStaffing:  state.staffing,
+    outboundTotalFte: getOutboundTotalFte(),
+  });
+}
+
+function showDepartment(dept) {
+  state.currentDepartment = dept;
+  document.getElementById('home-view')?.classList.add('hidden');
+  document.getElementById('main-layout')?.classList.remove('hidden');
+  document.getElementById('dept-inbound')?.classList.toggle('hidden', dept !== 'inbound');
+  document.getElementById('dept-outbound')?.classList.toggle('hidden', dept !== 'outbound');
+  const sub = document.getElementById('topbar-sub');
+  if (sub) sub.textContent = dept === 'outbound' ? 'Magazyn outbound' : 'Magazyn inbound';
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WYBÓR TRANSPORTÓW W ZAKŁADCE PROCESY
@@ -327,6 +448,8 @@ function setupUploadOverlay() {
   setupFileSlot('slot-awizacje',     'awizacje',     handleAwizacjeFile);
   setupFileSlot('slot-sscc-inbound', 'sscc-inbound', handleSsccInboundFile);
   setupFileSlot('slot-sscc-arrived', 'sscc-arrived', handleSsccArrivedFile);
+  setupFileSlot('slot-outbound-forecast-3m',        'outbound-forecast-3m',        handleForecast3mFile);
+  setupFileSlot('slot-outbound-forecast-solventum', 'outbound-forecast-solventum', handleForecastSolventumFile);
 }
 
 function setupFileSlot(slotId, fileType, handler) {
@@ -437,6 +560,60 @@ async function handleSsccArrivedFile(file) {
   }
 }
 
+async function handleForecast3mFile(file) {
+  updateFileStatus('outbound-forecast-3m', 'loading');
+  updateSlotUI('slot-outbound-forecast-3m', 'loading', file.name);
+  try {
+    const buf = await readFile(file);
+    state.outbound.forecast3m = parseForecastCsv(buf, file.name, '3M');
+    updateFileStatus('outbound-forecast-3m', 'ok');
+    updateSlotUI('slot-outbound-forecast-3m', 'ok', file.name);
+    recomputeOutboundProcesses();
+  } catch (err) {
+    console.error(err);
+    updateFileStatus('outbound-forecast-3m', 'error');
+    updateSlotUI('slot-outbound-forecast-3m', 'error', file.name);
+    showError(`Błąd Forecast 3M: ${err.message}`);
+  }
+}
+
+async function handleForecastSolventumFile(file) {
+  updateFileStatus('outbound-forecast-solventum', 'loading');
+  updateSlotUI('slot-outbound-forecast-solventum', 'loading', file.name);
+  try {
+    const buf = await readFile(file);
+    state.outbound.forecastSolventum = parseForecastCsv(buf, file.name, 'Solventum');
+    updateFileStatus('outbound-forecast-solventum', 'ok');
+    updateSlotUI('slot-outbound-forecast-solventum', 'ok', file.name);
+    recomputeOutboundProcesses();
+  } catch (err) {
+    console.error(err);
+    updateFileStatus('outbound-forecast-solventum', 'error');
+    updateSlotUI('slot-outbound-forecast-solventum', 'error', file.name);
+    showError(`Błąd Forecast Solventum: ${err.message}`);
+  }
+}
+
+function recomputeOutboundProcesses() {
+  if (!state.outbound.forecast3m && !state.outbound.forecastSolventum) return;
+  state.outbound.processes = calcAllOutboundProcesses({
+    forecast3m:        state.outbound.forecast3m,
+    forecastSolventum: state.outbound.forecastSolventum,
+    indicators:        state.outbound.indicators,
+    planningDate:      state.outbound.planningDate,
+  });
+  renderOutboundProcessesTab(state.outbound.processes);
+
+  const totals = sumOutboundFteByClient(state.outbound.processes);
+  renderOutboundStaffingTab(totals);
+
+  renderHomeCards({
+    inboundModel:     state.model,
+    inboundStaffing:  state.staffing,
+    outboundTotalFte: totals.totalFte,
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BUDOWANIE MODELU
 // ─────────────────────────────────────────────────────────────────────────────
@@ -465,6 +642,11 @@ function tryRebuildModel() {
     renderSsccTable(state.ssccInbound || []);
     renderProcessesTab(state.staffing, state.model.trucks, null);
     renderStaffingTab(state.staffing);
+    renderHomeCards({
+      inboundModel:     state.model,
+      inboundStaffing:  state.staffing,
+      outboundTotalFte: getOutboundTotalFte(),
+    });
     updateDataSummary();
   } catch (err) {
     console.error(err);

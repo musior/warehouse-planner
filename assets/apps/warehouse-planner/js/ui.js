@@ -5,6 +5,7 @@
 import { formatDate, round, isSameDay } from "./utils.js";
 import { buildSsccDetailTable } from "./dataModel.js";
 import { PROCESSES } from "./processes.js";
+import { LINE_COUNT_PROCESSES, PROCESS_GROUP_ORDER } from "./processesOutbound.js";
 
 // ── Stan UI ───────────────────────────────────────────────────────────────────
 let _selectedSis = null;
@@ -813,27 +814,43 @@ export function renderProcessesTab(
           label: "Kartony ÷ 10",
           value: staffing.crossBoxes + " ÷ 10 = " + recoCross.palletsReko,
         },
-        ...(recoCross.fullPallets > 0 ? [
-          {
-            label: "Pełne palety SOS",
-            value: recoCross.fullPallets + " pal.",
-          },
-          {
-            label: "FTE (BX + pal.)",
-            value: recoCross.fteBx + " + " + recoCross.fteFP,
-          },
-        ] : []),
+        ...(recoCross.fullPallets > 0
+          ? [
+              {
+                label: "Pełne palety SOS",
+                value: recoCross.fullPallets + " pal.",
+              },
+              {
+                label: "FTE (BX + pal.)",
+                value: recoCross.fteBx + " + " + recoCross.fteFP,
+              },
+            ]
+          : []),
       ],
       tooltip: makeTooltip([
-        { name: "BX → palety po reko",    formula: "Kartony CROSS &divide; 10" },
-        { name: "Benchmark BX",               formula: "480 &times; 85% &divide; 0,342 &asymp; 1&nbsp;193 pal/os./zmianę" },
-        { name: "FTE_BX",                     formula: "Pal. reko &divide; 1&nbsp;193" },
-        { name: "Pełne palety SOS (ST2)", formula: "Z fallback SOS — bez sortowania" },
-        { name: "Benchmark pal. SOS",         formula: "480 &times; 85% &divide; 0,142 &asymp; 2&nbsp;873 pal/os./zmianę" },
-        { name: "FTE_pal.",                   formula: "Pełne palety &divide; 2&nbsp;873" },
-        { name: "FTE (wynik)",                formula: "FTE_BX + FTE_pal. = N,NN os." },
-        { name: "Ceil (zaokrąglone w górę)", formula: "&lceil; FTE &rceil; &mdash; minimalna obsada" },
-        { name: "Wykorz. zmiany",             formula: _TT_UTIL },
+        { name: "BX → palety po reko", formula: "Kartony CROSS &divide; 10" },
+        {
+          name: "Benchmark BX",
+          formula:
+            "480 &times; 85% &divide; 0,342 &asymp; 1&nbsp;193 pal/os./zmianę",
+        },
+        { name: "FTE_BX", formula: "Pal. reko &divide; 1&nbsp;193" },
+        {
+          name: "Pełne palety SOS (ST2)",
+          formula: "Z fallback SOS — bez sortowania",
+        },
+        {
+          name: "Benchmark pal. SOS",
+          formula:
+            "480 &times; 85% &divide; 0,142 &asymp; 2&nbsp;873 pal/os./zmianę",
+        },
+        { name: "FTE_pal.", formula: "Pełne palety &divide; 2&nbsp;873" },
+        { name: "FTE (wynik)", formula: "FTE_BX + FTE_pal. = N,NN os." },
+        {
+          name: "Ceil (zaokrąglone w górę)",
+          formula: "&lceil; FTE &rceil; &mdash; minimalna obsada",
+        },
+        { name: "Wykorz. zmiany", formula: _TT_UTIL },
       ]),
     }) +
     buildProcessCard({
@@ -904,7 +921,10 @@ export function renderProcessesTab(
         },
         {
           label: "PE + kont. ST",
-          value: (przygowanieMagazyn.pelnePalety || 0) + " + " + (przygowanieMagazyn.kontenerST || 0),
+          value:
+            (przygowanieMagazyn.pelnePalety || 0) +
+            " + " +
+            (przygowanieMagazyn.kontenerST || 0),
         },
         {
           label: "FTE_20K + FTE_FP",
@@ -1013,23 +1033,51 @@ export function renderProcessesTab(
       extraRows: [
         {
           label: "BX magazyn ÷ 10",
-          value: recoCrossMagazyn.inputBoxes + " ÷ 10 = " + recoCrossMagazyn.palletsReko,
+          value:
+            recoCrossMagazyn.inputBoxes +
+            " ÷ 10 = " +
+            recoCrossMagazyn.palletsReko,
         },
-        ...(recoCrossMagazyn.fullPallets > 0 ? [
-          { label: "Pełne palety SOS", value: recoCrossMagazyn.fullPallets + " pal." },
-          { label: "FTE (BX + pal.)",  value: recoCrossMagazyn.fteBx + " + " + recoCrossMagazyn.fteFP },
-        ] : []),
+        ...(recoCrossMagazyn.fullPallets > 0
+          ? [
+              {
+                label: "Pełne palety SOS",
+                value: recoCrossMagazyn.fullPallets + " pal.",
+              },
+              {
+                label: "FTE (BX + pal.)",
+                value: recoCrossMagazyn.fteBx + " + " + recoCrossMagazyn.fteFP,
+              },
+            ]
+          : []),
       ],
       tooltip: makeTooltip([
-        { name: "BX → palety po reko",    formula: "Kartony CROSS magazyn &divide; 10" },
-        { name: "Benchmark BX",           formula: "480 &times; 85% &divide; 0,342 &asymp; 1&nbsp;193 pal/os./zmianę" },
-        { name: "FTE_BX",                 formula: "Pal. reko &divide; 1&nbsp;193" },
-        { name: "Pełne palety SOS (ST2)", formula: "Z fallback SOS — bez sortowania" },
-        { name: "Benchmark pal. SOS",     formula: "480 &times; 85% &divide; 0,142 &asymp; 2&nbsp;873 pal/os./zmianę" },
-        { name: "FTE_pal.",               formula: "Pełne palety &divide; 2&nbsp;873" },
-        { name: "FTE (wynik)",            formula: "FTE_BX + FTE_pal. = N,NN os." },
-        { name: "Ceil (zaokrąglone w górę)", formula: "&lceil; FTE &rceil; &mdash; minimalna obsada" },
-        { name: "Wykorz. zmiany",         formula: _TT_UTIL },
+        {
+          name: "BX → palety po reko",
+          formula: "Kartony CROSS magazyn &divide; 10",
+        },
+        {
+          name: "Benchmark BX",
+          formula:
+            "480 &times; 85% &divide; 0,342 &asymp; 1&nbsp;193 pal/os./zmianę",
+        },
+        { name: "FTE_BX", formula: "Pal. reko &divide; 1&nbsp;193" },
+        {
+          name: "Pełne palety SOS (ST2)",
+          formula: "Z fallback SOS — bez sortowania",
+        },
+        {
+          name: "Benchmark pal. SOS",
+          formula:
+            "480 &times; 85% &divide; 0,142 &asymp; 2&nbsp;873 pal/os./zmianę",
+        },
+        { name: "FTE_pal.", formula: "Pełne palety &divide; 2&nbsp;873" },
+        { name: "FTE (wynik)", formula: "FTE_BX + FTE_pal. = N,NN os." },
+        {
+          name: "Ceil (zaokrąglone w górę)",
+          formula: "&lceil; FTE &rceil; &mdash; minimalna obsada",
+        },
+        { name: "Wykorz. zmiany", formula: _TT_UTIL },
       ]),
     }) +
     buildProcessCard({
@@ -1041,7 +1089,10 @@ export function renderProcessesTab(
       extraRows: [
         {
           label: "Pal. reko × 0.75",
-          value: foliaCrossMagazyn.palletsReko + " × 0.75 = " + foliaCrossMagazyn.palletsFolia,
+          value:
+            foliaCrossMagazyn.palletsReko +
+            " × 0.75 = " +
+            foliaCrossMagazyn.palletsFolia,
         },
       ],
       tooltip: ttSimple(
@@ -1371,8 +1422,38 @@ function buildProcessCardPlaceholder(label) {
 // PLANOWANIE LUDZI
 // ─────────────────────────────────────────────────────────────────────────────
 
+function fteColorClass(exact) {
+  if (exact < 10) return "fte-green";
+  if (exact < 20) return "fte-amber";
+  if (exact <= 30) return "";
+  return "fte-red";
+}
+
+function fmtNum(v) {
+  return (v || 0).toLocaleString("pl-PL");
+}
+
+function volCard(label, value, unit, sub) {
+  return (
+    '<div class="staffing-vol-card">' +
+    '<div class="staffing-vol-label">' +
+    esc(label) +
+    "</div>" +
+    '<div class="staffing-vol-value">' +
+    fmtNum(value) +
+    "</div>" +
+    '<div class="staffing-vol-unit">' +
+    esc(unit) +
+    "</div>" +
+    '<div class="staffing-vol-sub">' +
+    esc(sub) +
+    "</div>" +
+    "</div>"
+  );
+}
+
 export function renderStaffingTab(staffing) {
-  const wrap = document.getElementById('staffing-content');
+  const wrap = document.getElementById("staffing-content");
   if (!wrap) return;
 
   if (!staffing) {
@@ -1382,54 +1463,341 @@ export function renderStaffingTab(staffing) {
     return;
   }
 
-  function fteColorClass(exact) {
-    if (exact < 10) return 'fte-green';
-    if (exact < 20) return 'fte-amber';
-    if (exact <= 30) return '';
-    return 'fte-red';
-  }
-
-  function fmtNum(v) {
-    return (v || 0).toLocaleString('pl-PL');
-  }
-
-  function volCard(label, value, unit, sub) {
-    return (
-      '<div class="staffing-vol-card">' +
-        '<div class="staffing-vol-label">' + esc(label) + '</div>' +
-        '<div class="staffing-vol-value">' + fmtNum(value) + '</div>' +
-        '<div class="staffing-vol-unit">' + esc(unit) + '</div>' +
-        '<div class="staffing-vol-sub">' + esc(sub) + '</div>' +
-      '</div>'
-    );
-  }
-
   const colorCls = fteColorClass(staffing.totalPeople);
 
   wrap.innerHTML =
     '<div class="staffing-total-row">' +
-      '<div class="staffing-fte-hero' + (colorCls ? ' ' + colorCls : '') + '">' +
-        '<div class="staffing-fte-hero-label">FTE Total</div>' +
-        '<div class="staffing-fte-hero-value">' + staffing.totalPeople + '</div>' +
-      '</div>' +
-    '</div>' +
+    '<div class="staffing-fte-hero' +
+    (colorCls ? " " + colorCls : "") +
+    '">' +
+    '<div class="staffing-fte-hero-label">FTE Total</div>' +
+    '<div class="staffing-fte-hero-value">' +
+    staffing.totalPeople +
+    "</div>" +
+    "</div>" +
+    "</div>" +
     '<div class="staffing-fte-row">' +
-      '<div class="staffing-fte-card staffing-inbound">' +
-        '<div class="staffing-fte-label">FTE Inbound</div>' +
-        '<div class="staffing-fte-value">' + staffing.totalInbound + '</div>' +
-      '</div>' +
-      '<div class="staffing-fte-card staffing-magazyn">' +
-        '<div class="staffing-fte-label">FTE Magazyn</div>' +
-        '<div class="staffing-fte-value">' + staffing.totalMagazyn + '</div>' +
-      '</div>' +
-    '</div>' +
+    '<div class="staffing-fte-card staffing-inbound">' +
+    '<div class="staffing-fte-label">FTE Inbound</div>' +
+    '<div class="staffing-fte-value">' +
+    staffing.totalInbound +
+    "</div>" +
+    "</div>" +
+    '<div class="staffing-fte-card staffing-magazyn">' +
+    '<div class="staffing-fte-label">FTE Magazyn</div>' +
+    '<div class="staffing-fte-value">' +
+    staffing.totalMagazyn +
+    "</div>" +
+    "</div>" +
+    "</div>" +
     '<div class="staffing-vol-row">' +
-      volCard('Palety do rozładunku', staffing.unloadingPallets,      'palet',    'Inbound') +
-      volCard('Kartony DG',           staffing.dgBoxes,               'kartonów', 'Inbound — do sortowania') +
-      volCard('Kartony CROSS',        staffing.crossBoxes,            'kartonów', 'Inbound — do sortowania') +
-      volCard('Kartony DG',           staffing.sortMagazynDgBoxes,    'kartonów', 'Magazyn — rampa + plac') +
-      volCard('Kartony CROSS',        staffing.sortCrossMagazynBoxes, 'kartonów', 'Magazyn — rampa + plac') +
-    '</div>';
+    volCard(
+      "Palety do rozładunku",
+      staffing.unloadingPallets,
+      "palet",
+      "Inbound",
+    ) +
+    volCard(
+      "Kartony DG",
+      staffing.dgBoxes,
+      "kartonów",
+      "Inbound — do sortowania",
+    ) +
+    volCard(
+      "Kartony CROSS",
+      staffing.crossBoxes,
+      "kartonów",
+      "Inbound — do sortowania",
+    ) +
+    volCard(
+      "Kartony DG",
+      staffing.sortMagazynDgBoxes,
+      "kartonów",
+      "Magazyn — rampa + plac",
+    ) +
+    volCard(
+      "Kartony CROSS",
+      staffing.sortCrossMagazynBoxes,
+      "kartonów",
+      "Magazyn — rampa + plac",
+    ) +
+    "</div>";
+}
+
+export function renderOutboundStaffingTab(totals) {
+  const wrap = document.getElementById("outbound-staffing-content");
+  if (!wrap) return;
+
+  if (!totals) {
+    wrap.innerHTML =
+      '<div class="empty-state"><div class="empty-icon">&#128101;</div>' +
+      '<div class="empty-text">Wczytaj dane Outbound, aby zobaczyć planowanie</div></div>';
+    return;
+  }
+
+  const { totalFte, fte3m, fteSolventum, lineCount3m, lineCountSolventum } = totals;
+  const colorCls = fteColorClass(totalFte);
+
+  wrap.innerHTML =
+    '<div class="staffing-total-row">' +
+    '<div class="staffing-fte-hero' +
+    (colorCls ? " " + colorCls : "") +
+    '">' +
+    '<div class="staffing-fte-hero-label">FTE Total</div>' +
+    '<div class="staffing-fte-hero-value">' +
+    totalFte +
+    "</div>" +
+    "</div>" +
+    "</div>" +
+    '<div class="staffing-fte-row">' +
+    '<div class="staffing-fte-card staffing-inbound">' +
+    '<div class="staffing-fte-label">FTE 3M</div>' +
+    '<div class="staffing-fte-value">' +
+    fte3m +
+    "</div>" +
+    "</div>" +
+    '<div class="staffing-fte-card staffing-magazyn">' +
+    '<div class="staffing-fte-label">FTE Solventum</div>' +
+    '<div class="staffing-fte-value">' +
+    fteSolventum +
+    "</div>" +
+    "</div>" +
+    "</div>" +
+    '<div class="staffing-vol-row staffing-vol-row--outbound">' +
+    volCard("Linie Forecast", lineCount3m, "linii", "3M — na dzień planowania") +
+    volCard("Linie Forecast", lineCountSolventum, "linii", "Solventum — na dzień planowania") +
+    "</div>";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STRONA GŁÓWNA — KARTY DZIAŁÓW
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function renderHomeCards({
+  inboundModel,
+  inboundStaffing,
+  outboundTotalFte,
+}) {
+  renderInboundDeptCardKpis(inboundModel, inboundStaffing);
+  renderOutboundDeptCardKpis(outboundTotalFte);
+}
+
+function renderInboundDeptCardKpis(model, staffing) {
+  const el = document.getElementById("dept-card-kpis-inbound");
+  if (!el) return;
+
+  if (!model || !staffing) {
+    el.innerHTML =
+      '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
+    return;
+  }
+
+  el.innerHTML =
+    '<div class="dept-card-kpi">' +
+    '<div class="dept-card-kpi-value">' +
+    staffing.totalPeople +
+    "</div>" +
+    '<div class="dept-card-kpi-label">FTE Total</div>' +
+    "</div>" +
+    '<div class="dept-card-kpi">' +
+    '<div class="dept-card-kpi-value">' +
+    (model.kpi?.totalTrucks ?? 0) +
+    "</div>" +
+    '<div class="dept-card-kpi-label">Transporty</div>' +
+    "</div>";
+}
+
+function renderOutboundDeptCardKpis(totalFte) {
+  const el = document.getElementById("dept-card-kpis-outbound");
+  if (!el) return;
+
+  if (totalFte === null || totalFte === undefined) {
+    el.innerHTML =
+      '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
+    return;
+  }
+
+  el.innerHTML =
+    '<div class="dept-card-kpi">' +
+    '<div class="dept-card-kpi-value">' +
+    totalFte +
+    "</div>" +
+    '<div class="dept-card-kpi-label">FTE Total</div>' +
+    "</div>";
+}
+
+export function renderOutboundProcessesTab(results) {
+  const wrap = document.getElementById("outbound-processes-content");
+  if (!wrap) return;
+
+  const availableDefs = LINE_COUNT_PROCESSES.filter(
+    (def) => results && results[def.key],
+  );
+
+  if (!results || availableDefs.length === 0) {
+    wrap.innerHTML =
+      '<div class="empty-state"><div class="empty-icon">&#9881;</div>' +
+      '<div class="empty-text">Wczytaj dane Outbound, aby zobaczyć obliczenia</div></div>';
+    return;
+  }
+
+  // Grupowanie kart wg PROCESS_GROUP_ORDER (Picking, Pallet Operations, Loading, ...)
+  const defsByGroup = new Map();
+  for (const def of availableDefs) {
+    if (!defsByGroup.has(def.group)) defsByGroup.set(def.group, []);
+    defsByGroup.get(def.group).push(def);
+  }
+
+  const groupTotals = [];
+  const sectionsHtml = PROCESS_GROUP_ORDER.filter((group) =>
+    defsByGroup.has(group),
+  )
+    .map((group) => {
+      const defs = defsByGroup.get(group);
+      const groupTotal = round(
+        defs.reduce((sum, def) => sum + sumClientsFte(results[def.key]), 0),
+        2,
+      );
+      groupTotals.push({ group, total: groupTotal });
+
+      const cardsHtml = defs
+        .map((def) => buildLineCountProcessCard(def, results[def.key]))
+        .join("");
+      return (
+        '<div class="process-section-header">' +
+        '<span class="process-section-title">' +
+        esc(group) +
+        "</span>" +
+        '<span class="process-section-total">' +
+        groupTotal +
+        " os.</span>" +
+        "</div>" +
+        '<div class="process-cards">' +
+        cardsHtml +
+        "</div>"
+      );
+    })
+    .join("");
+
+  const grandTotal = round(
+    groupTotals.reduce((sum, g) => sum + g.total, 0),
+    2,
+  );
+  const summaryHtml =
+    '<div class="process-summary-bar">' +
+    groupTotals
+      .map((g) => buildSummaryItem(esc(g.group), g.total, false))
+      .join("") +
+    buildSummaryItem("FTE Łącznie", grandTotal, true) +
+    "</div>";
+
+  wrap.innerHTML =
+    '<div class="processes-layout">' + summaryHtml + sectionsHtml + "</div>";
+}
+
+function sumClientsFte(resultObj) {
+  return round(
+    resultObj.clients.reduce((sum, c) => sum + c.fte, 0),
+    2,
+  );
+}
+
+function buildLineCountProcessCard(def, resultObj) {
+  const totalFte = sumClientsFte(resultObj);
+  const metricLabel = def.metric === "vasSum" ? "suma VAS" : "linii";
+  const rows = resultObj.clients
+    .map(
+      (c) =>
+        '<div class="process-breakdown-row"><span class="process-breakdown-label">' +
+        esc(c.client) +
+        " — " +
+        metricLabel +
+        '</span><span class="process-breakdown-value">' +
+        (def.metric === "vasSum" ? c.vasSum : c.lineCount) +
+        "</span></div>" +
+        '<div class="process-breakdown-row"><span class="process-breakdown-label">' +
+        esc(c.client) +
+        ' — wynik</span><span class="process-breakdown-value">' +
+        c.result +
+        "</span></div>" +
+        '<div class="process-breakdown-row"><span class="process-breakdown-label">' +
+        esc(c.client) +
+        ' — FTE</span><span class="process-breakdown-value">' +
+        c.fte +
+        "</span></div>",
+    )
+    .join("");
+
+  return (
+    '<div class="process-card process-card--blue" id="process-card-' +
+    def.key +
+    '">' +
+    '<div class="process-card-header">' +
+    '<span class="process-card-icon">' +
+    def.icon +
+    "</span>" +
+    '<span class="process-card-label">' +
+    esc(def.label) +
+    "</span>" +
+    "</div>" +
+    '<div class="process-card-main">' +
+    '<div class="process-people">' +
+    '<span class="process-people-value">' +
+    totalFte +
+    "</span>" +
+    '<span class="process-people-unit">FTE</span>' +
+    "</div>" +
+    "</div>" +
+    '<div class="process-card-breakdown">' +
+    rows +
+    "</div>" +
+    "</div>"
+  );
+}
+
+export function renderOutboundIndicatorsTab(indicators) {
+  const wrap = document.getElementById("outbound-indicators-content");
+  if (!wrap) return;
+
+  let rows = "";
+  for (const row of indicators) {
+    if (row.spacer) {
+      rows += '<tr class="indicators-spacer-row"><td colspan="3"></td></tr>';
+      continue;
+    }
+    rows +=
+      "<tr>" +
+      "<td>" +
+      esc(row.label) +
+      "</td>" +
+      '<td class="num">' +
+      '<input type="number" step="any" class="indicator-input" ' +
+      'data-id="' +
+      esc(row.id) +
+      '" value="' +
+      row.value +
+      '">' +
+      "</td>" +
+      '<td class="num">' +
+      '<input type="number" step="any" class="indicator-standard-time-input indicator-input" ' +
+      'data-id="' +
+      esc(row.id) +
+      '" value="' +
+      row.standardTime +
+      '">' +
+      "</td>" +
+      "</tr>";
+  }
+
+  wrap.innerHTML =
+    '<div class="table-wrap">' +
+    '<table class="data-table indicators-table">' +
+    '<thead><tr><th>Proces</th><th class="num">Wartość</th><th class="num">Czas standardowy</th></tr></thead>' +
+    "<tbody>" +
+    rows +
+    "</tbody>" +
+    "</table>" +
+    "</div>";
 }
 
 export function renderTimesTab() {
