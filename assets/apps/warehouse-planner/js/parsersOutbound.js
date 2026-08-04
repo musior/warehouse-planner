@@ -12,12 +12,31 @@ export const FORECAST_REQUIRED_COLS = [
   'VAS',
 ];
 
+// Nazwa pliku musi zawierać ten token — zabezpieczenie przed wgraniem
+// pliku do złego slotu (np. Solventum do slotu 3M i odwrotnie).
+export const FORECAST_3M_FILENAME_TOKEN = 'FORECAST';
+export const FORECAST_SOLVENTUM_FILENAME_TOKEN = 'FORECMED';
+
+function _validateForecastFilename(filename, token, clientLabel) {
+  if (!filename || !filename.toUpperCase().includes(token)) {
+    throw new Error(
+      `Plik Forecast ${clientLabel} powinien mieć w nazwie "${token}" (podano: ${filename})`
+    );
+  }
+}
+
 /**
  * Parsuje plik Forecast (CSV) — struktura wspólna dla 3M i Solventum.
  * Format delimitera i kodowania jest auto-wykrywany (pliki mogą różnić się
  * eksportem: przecinek/średnik/tabulator, UTF-8/UTF-16).
+ *
+ * @param {'3M'|'Solventum'} client — decyduje, jakiego tokenu w nazwie pliku
+ *   oczekujemy (zabezpieczenie przed pomyloną kolejnością wgrywania plików).
  */
-export function parseForecastCsv(buffer, filename) {
+export function parseForecastCsv(buffer, filename, client) {
+  const token = client === 'Solventum' ? FORECAST_SOLVENTUM_FILENAME_TOKEN : FORECAST_3M_FILENAME_TOKEN;
+  _validateForecastFilename(filename, token, client);
+
   const text = decodeCsvBuffer(buffer);
   const lines = text.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
   if (lines.length === 0) {
