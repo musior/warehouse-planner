@@ -565,7 +565,7 @@ async function handleForecast3mFile(file) {
   updateSlotUI('slot-outbound-forecast-3m', 'loading', file.name);
   try {
     const buf = await readFile(file);
-    state.outbound.forecast3m = parseForecastCsv(buf, file.name);
+    state.outbound.forecast3m = parseForecastCsv(buf, file.name, '3M');
     updateFileStatus('outbound-forecast-3m', 'ok');
     updateSlotUI('slot-outbound-forecast-3m', 'ok', file.name);
     recomputeOutboundProcesses();
@@ -582,7 +582,7 @@ async function handleForecastSolventumFile(file) {
   updateSlotUI('slot-outbound-forecast-solventum', 'loading', file.name);
   try {
     const buf = await readFile(file);
-    state.outbound.forecastSolventum = parseForecastCsv(buf, file.name);
+    state.outbound.forecastSolventum = parseForecastCsv(buf, file.name, 'Solventum');
     updateFileStatus('outbound-forecast-solventum', 'ok');
     updateSlotUI('slot-outbound-forecast-solventum', 'ok', file.name);
     recomputeOutboundProcesses();
