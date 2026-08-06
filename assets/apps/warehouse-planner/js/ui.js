@@ -1580,6 +1580,25 @@ export function renderHomeCards({
 }) {
   renderInboundDeptCardKpis(inboundModel, inboundStaffing);
   renderOutboundDeptCardKpis(outboundTotalFte);
+  renderHomeTotal(inboundStaffing?.totalPeople, outboundTotalFte);
+}
+
+function renderHomeTotal(inboundFte, outboundFte) {
+  const el = document.getElementById("home-total-value");
+  if (!el) return;
+
+  const hasInbound = typeof inboundFte === "number";
+  const hasOutbound = typeof outboundFte === "number";
+
+  if (!hasInbound && !hasOutbound) {
+    el.textContent = "Wczytaj pliki, aby zobaczyć łączny wynik";
+    el.classList.add("is-empty");
+    return;
+  }
+
+  const total = round((inboundFte || 0) + (outboundFte || 0), 2);
+  el.textContent = total;
+  el.classList.remove("is-empty");
 }
 
 function renderInboundDeptCardKpis(model, staffing) {

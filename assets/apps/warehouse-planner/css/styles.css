@@ -212,6 +212,40 @@ body {
   margin-bottom: 36px;
 }
 
+.home-total-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--blue);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-total-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-2);
+}
+
+.home-total-value {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--blue);
+}
+.home-total-value.is-empty {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
 .dept-cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
