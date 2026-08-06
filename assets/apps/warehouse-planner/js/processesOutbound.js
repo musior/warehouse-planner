@@ -219,7 +219,7 @@ const LINE_COUNT_PROCESSES = [
     key: "rwk",
     indicatorId: "rwk",
     label: "RWK",
-    icon: "&#128203;", // 📋
+    icon: ICON_VAS,
     statusSet: LINE_STATUS_VAS,
     filterGroup: "VAS",
     nameListFilter: "RWK", // wydzielone z VAS: tylko NAME_LIST = "RWK"
@@ -245,7 +245,10 @@ const OUTBOUND_FTE_DIVISOR = 408;
  * - "RWK"     — liczymy tylko wiersze z NAME_LIST = "RWK" (proces RWK)
  * - "NOT_RWK" — liczymy wszystko OPRÓCZ NAME_LIST = "RWK" (proces VAS)
  */
-function analyzeForecastRows(rows, { planningDate, extraDate, statusSet, nameListFilter }) {
+function analyzeForecastRows(
+  rows,
+  { planningDate, extraDate, statusSet, nameListFilter },
+) {
   const statusLower = statusSet.map((s) => s.toLowerCase());
 
   let bothMatch = 0;
