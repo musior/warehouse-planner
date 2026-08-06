@@ -104,13 +104,22 @@ export const DEFAULT_OUTBOUND_INDICATORS = [
     id: "check-pack-dpd",
     label: "CHECK&PACK DPD",
     value: 0.317995,
-    standardTime: 0.6420,
+    standardTime: 0.642,
   },
   {
     // VAS nie ma osobnego wskaźnika logistycznego — "wartość" jest nieużywana
-    // w obliczeniach (patrz processesOutbound.js, metric: "vasSum").
+    // w obliczeniach (patrz processesOutbound.js, metric: "vasSum"). Dotyczy
+    // tylko linii, które NIE mają NAME_LIST = "RWK" (te liczą się do RWK).
     id: "vas",
     label: "VAS",
+    value: 0,
+    standardTime: 0.12,
+  },
+  {
+    // RWK — wydzielone z VAS: te same zasady liczenia, ale tylko dla linii
+    // z NAME_LIST = "RWK". "Wartość" również nieużywana (jak w VAS).
+    id: "rwk",
+    label: "RWK",
     value: 0,
     standardTime: 0.12,
   },
