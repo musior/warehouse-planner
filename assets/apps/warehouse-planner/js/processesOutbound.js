@@ -211,7 +211,19 @@ const LINE_COUNT_PROCESSES = [
     icon: ICON_VAS,
     statusSet: LINE_STATUS_VAS,
     filterGroup: "VAS",
+    nameListFilter: "NOT_RWK", // wszystko poza NAME_LIST = "RWK" (ten trafia do procesu RWK)
     metric: "vasSum", // suma kolumny VAS z pasujących linii, bez mnożenia przez wskaźnik
+    group: "VAS",
+  },
+  {
+    key: "rwk",
+    indicatorId: "rwk",
+    label: "RWK",
+    icon: "&#128203;", // 📋
+    statusSet: LINE_STATUS_VAS,
+    filterGroup: "VAS",
+    nameListFilter: "RWK", // wydzielone z VAS: tylko NAME_LIST = "RWK"
+    metric: "vasSum",
     group: "VAS",
   },
 ];
@@ -228,8 +240,12 @@ const OUTBOUND_FTE_DIVISOR = 408;
  * bo skoro linia ma nadal status "otwarty", to trzeba ją domknąć przy
  * najbliższym planowaniu. Dodatkowo dla Polski doliczamy jeszcze jeden
  * dzień do przodu (extraDate), ale tylko dokładnie ten dzień.
+ *
+ * nameListFilter (opcjonalny) rozdziela VAS / RWK po kolumnie NAME_LIST:
+ * - "RWK"     — liczymy tylko wiersze z NAME_LIST = "RWK" (proces RWK)
+ * - "NOT_RWK" — liczymy wszystko OPRÓCZ NAME_LIST = "RWK" (proces VAS)
  */
-function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
+function analyzeForecastRows(rows, { planningDate, extraDate, statusSet, nameListFilter }) {
   const statusLower = statusSet.map((s) => s.toLowerCase());
 
   let bothMatch = 0;
@@ -239,12 +255,20 @@ function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
     if (!row.expectedShipDate) continue;
 
     const statusOk = statusLower.includes((row.lineStatus || "").toLowerCase());
+    if (!statusOk) continue;
+
+    if (nameListFilter) {
+      const isRwk = (row.nameList || "").trim().toUpperCase() === "RWK";
+      if (nameListFilter === "RWK" && !isRwk) continue;
+      if (nameListFilter === "NOT_RWK" && isRwk) continue;
+    }
+
     const isPoland = (row.nameCountry || "").trim().toUpperCase() === "POLSKA";
     const dateOk =
       row.expectedShipDate.getTime() <= planningDate.getTime() ||
       (isSameDay(row.expectedShipDate, extraDate) && isPoland);
 
-    if (statusOk && dateOk) {
+    if (dateOk) {
       bothMatch++;
       vasSum += row.vas || 0;
     }
@@ -254,18 +278,20 @@ function analyzeForecastRows(rows, { planningDate, extraDate, statusSet }) {
 }
 
 /**
- * Liczy ilość linii (per klient) dla danego zestawu statusów (statusSet) — raz
- * na oba pliki. Procesy dzielące ten sam statusSet (np. wszystkie "OUT") współdzielą
- * ten sam wynik, żeby nie liczyć identycznego filtra po kilka razy.
+ * Liczy ilość linii (per klient) dla danego zestawu statusów + opcjonalnego
+ * filtra NAME_LIST — raz na oba pliki. Procesy dzielące dokładnie ten sam
+ * statusSet i nameListFilter (np. wszystkie "OUT") współdzielą ten sam wynik,
+ * żeby nie liczyć identycznego filtra po kilka razy.
  */
 function computeLineStatsForStatusSet({
   forecast3m,
   forecastSolventum,
   planningDate,
   statusSet,
+  nameListFilter,
 }) {
   const extraDate = nextBusinessDay(planningDate);
-  const opts = { planningDate, extraDate, statusSet };
+  const opts = { planningDate, extraDate, statusSet, nameListFilter };
   return {
     extraDate,
     stats3m: analyzeForecastRows(forecast3m || [], opts),
@@ -326,19 +352,21 @@ export function calcAllOutboundProcesses({
   planningDate,
 }) {
   planningDate = planningDate || getDefaultOutboundPlanningDate();
-  const lineStatsByStatusSet = new Map(); // statusSet (referencja) -> lineStats
+  const lineStatsByKey = new Map(); // "filterGroup|nameListFilter" -> lineStats
 
   const result = { planningDate };
   for (const def of LINE_COUNT_PROCESSES) {
-    let lineStats = lineStatsByStatusSet.get(def.statusSet);
+    const cacheKey = def.filterGroup + "|" + (def.nameListFilter || "");
+    let lineStats = lineStatsByKey.get(cacheKey);
     if (!lineStats) {
       lineStats = computeLineStatsForStatusSet({
         forecast3m,
         forecastSolventum,
         planningDate,
         statusSet: def.statusSet,
+        nameListFilter: def.nameListFilter,
       });
-      lineStatsByStatusSet.set(def.statusSet, lineStats);
+      lineStatsByKey.set(cacheKey, lineStats);
     }
     result[def.key] = buildProcessResult(
       def,

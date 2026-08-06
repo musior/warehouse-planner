@@ -10,6 +10,7 @@ export const FORECAST_REQUIRED_COLS = [
   'OBD',
   'NAME_COUNTRY',
   'VAS',
+  'NAME_LIST',
 ];
 
 // Nazwa pliku musi zawierać ten token — zabezpieczenie przed wgraniem
@@ -64,6 +65,7 @@ export function parseForecastCsv(buffer, filename, client) {
       obd:                 (cells[colIndex.OBD] || '').trim(),
       nameCountry:         (cells[colIndex.NAME_COUNTRY] || '').trim(),
       vas:                 toNumber(cells[colIndex.VAS]),   // liczba — sumowana dla procesu VAS
+      nameList:            (cells[colIndex.NAME_LIST] || '').trim(),   // rozdziela VAS / RWK
     });
   }
   return rows;
