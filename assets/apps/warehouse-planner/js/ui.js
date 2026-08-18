@@ -2,7 +2,7 @@
 // ui.js — renderowanie: KPI, lista aut, panel szczegółów, tabele zakładek
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { formatDate, round, isSameDay } from "./utils.js";
+import { formatDate, formatTime, round, isSameDay } from "./utils.js";
 import { buildSsccDetailTable } from "./dataModel.js";
 import { PROCESSES } from "./processes.js";
 import { LINE_COUNT_PROCESSES, PROCESS_GROUP_ORDER } from "./processesOutbound.js";
@@ -1577,72 +1577,128 @@ export function renderHomeCards({
   inboundModel,
   inboundStaffing,
   outboundTotalFte,
+  inboundSnapshot,
+  outboundSnapshot,
 }) {
-  renderInboundDeptCardKpis(inboundModel, inboundStaffing);
-  renderOutboundDeptCardKpis(outboundTotalFte);
-  renderHomeTotal(inboundStaffing?.totalPeople, outboundTotalFte);
+  renderInboundDeptCardKpis(inboundModel, inboundStaffing, inboundSnapshot);
+  renderOutboundDeptCardKpis(outboundTotalFte, outboundSnapshot);
+  renderHomeTotal(
+    inboundStaffing?.totalPeople,
+    outboundTotalFte,
+    inboundSnapshot,
+    outboundSnapshot,
+  );
 }
 
-function renderHomeTotal(inboundFte, outboundFte) {
+function formatSnapshotMeta(meta) {
+  const who = meta?.updated_by || meta?.created_by || "—";
+  const when = meta?.updated_at ? formatIsoDateTime(meta.updated_at) : "—";
+  return "Ostatnia aktualizacja: " + esc(when) + " — " + esc(who);
+}
+
+function formatIsoDateTime(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return formatDate(d) + " " + formatTime(d);
+}
+
+function renderHomeTotal(inboundFte, outboundFte, inboundSnapshot, outboundSnapshot) {
   const el = document.getElementById("home-total-value");
+  const noteEl = document.getElementById("home-total-note");
   if (!el) return;
 
-  const hasInbound = typeof inboundFte === "number";
-  const hasOutbound = typeof outboundFte === "number";
+  const inboundVal = typeof inboundFte === "number" ? inboundFte : inboundSnapshot?.totalFte;
+  const outboundVal = typeof outboundFte === "number" ? outboundFte : outboundSnapshot?.totalFte;
 
-  if (!hasInbound && !hasOutbound) {
+  if (typeof inboundVal !== "number" && typeof outboundVal !== "number") {
     el.textContent = "Wczytaj pliki, aby zobaczyć łączny wynik";
     el.classList.add("is-empty");
+    if (noteEl) noteEl.textContent = "";
     return;
   }
 
-  const total = round((inboundFte || 0) + (outboundFte || 0), 2);
+  const total = round((inboundVal || 0) + (outboundVal || 0), 2);
   el.textContent = total;
   el.classList.remove("is-empty");
+
+  const usingSnapshot = typeof inboundFte !== "number" || typeof outboundFte !== "number";
+  if (noteEl) {
+    noteEl.textContent = usingSnapshot
+      ? "Częściowo lub w całości z ostatniego zapisu — wczytaj pliki, aby odświeżyć"
+      : "";
+  }
 }
 
-function renderInboundDeptCardKpis(model, staffing) {
+function renderInboundDeptCardKpis(model, staffing, snapshot) {
   const el = document.getElementById("dept-card-kpis-inbound");
   if (!el) return;
 
-  if (!model || !staffing) {
+  if (model && staffing) {
     el.innerHTML =
-      '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
+      '<div class="dept-card-kpi">' +
+      '<div class="dept-card-kpi-value">' +
+      staffing.totalPeople +
+      "</div>" +
+      '<div class="dept-card-kpi-label">FTE Total</div>' +
+      "</div>" +
+      '<div class="dept-card-kpi">' +
+      '<div class="dept-card-kpi-value">' +
+      (model.kpi?.totalTrucks ?? 0) +
+      "</div>" +
+      '<div class="dept-card-kpi-label">Transporty</div>' +
+      "</div>";
+    return;
+  }
+
+  if (snapshot) {
+    el.innerHTML =
+      '<div class="dept-card-kpi">' +
+      '<div class="dept-card-kpi-value">' +
+      snapshot.totalFte +
+      "</div>" +
+      '<div class="dept-card-kpi-label">FTE Total (ostatni zapis)</div>' +
+      "</div>" +
+      '<div class="dept-card-last-update">' +
+      formatSnapshotMeta(snapshot.meta) +
+      "</div>";
     return;
   }
 
   el.innerHTML =
-    '<div class="dept-card-kpi">' +
-    '<div class="dept-card-kpi-value">' +
-    staffing.totalPeople +
-    "</div>" +
-    '<div class="dept-card-kpi-label">FTE Total</div>' +
-    "</div>" +
-    '<div class="dept-card-kpi">' +
-    '<div class="dept-card-kpi-value">' +
-    (model.kpi?.totalTrucks ?? 0) +
-    "</div>" +
-    '<div class="dept-card-kpi-label">Transporty</div>' +
-    "</div>";
+    '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
 }
 
-function renderOutboundDeptCardKpis(totalFte) {
+function renderOutboundDeptCardKpis(totalFte, snapshot) {
   const el = document.getElementById("dept-card-kpis-outbound");
   if (!el) return;
 
-  if (totalFte === null || totalFte === undefined) {
+  if (typeof totalFte === "number") {
     el.innerHTML =
-      '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
+      '<div class="dept-card-kpi">' +
+      '<div class="dept-card-kpi-value">' +
+      totalFte +
+      "</div>" +
+      '<div class="dept-card-kpi-label">FTE Total</div>' +
+      "</div>";
+    return;
+  }
+
+  if (snapshot) {
+    el.innerHTML =
+      '<div class="dept-card-kpi">' +
+      '<div class="dept-card-kpi-value">' +
+      snapshot.totalFte +
+      "</div>" +
+      '<div class="dept-card-kpi-label">FTE Total (ostatni zapis)</div>' +
+      "</div>" +
+      '<div class="dept-card-last-update">' +
+      formatSnapshotMeta(snapshot.meta) +
+      "</div>";
     return;
   }
 
   el.innerHTML =
-    '<div class="dept-card-kpi">' +
-    '<div class="dept-card-kpi-value">' +
-    totalFte +
-    "</div>" +
-    '<div class="dept-card-kpi-label">FTE Total</div>' +
-    "</div>";
+    '<div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>';
 }
 
 export function renderOutboundProcessesTab(results) {
