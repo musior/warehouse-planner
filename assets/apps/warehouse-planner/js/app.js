@@ -16,6 +16,7 @@ import { loadOutboundIndicators, setOutboundIndicatorField } from './outboundInd
 import { parseForecastCsv }                      from './parsersOutbound.js';
 import { calcAllOutboundProcesses, sumOutboundFteByClient,
          getDefaultOutboundPlanningDate }                from './processesOutbound.js';
+import { fetchLatestSnapshots, saveSnapshot }             from './planningSnapshotApi.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
@@ -30,6 +31,7 @@ const state = {
   selectedSisSet:  null,   // null = wszystkie zaznaczone
 
   currentDepartment: null,          // null (strona główna) | 'inbound' | 'outbound'
+  snapshots: { inbound: null, outbound: null },  // ostatnie wyniki zapisane na backendzie
   outbound: {
     indicators:        loadOutboundIndicators(),  // wskaźniki logistyczne — localStorage (na razie)
     forecast3m:        null,
@@ -42,6 +44,56 @@ const state = {
 function getOutboundTotalFte() {
   if (!state.outbound.processes) return null;
   return sumOutboundFteByClient(state.outbound.processes).totalFte;
+}
+
+function refreshHomeCards() {
+  renderHomeCards({
+    inboundModel:      state.model,
+    inboundStaffing:   state.staffing,
+    outboundTotalFte:  getOutboundTotalFte(),
+    inboundSnapshot:   state.snapshots.inbound,
+    outboundSnapshot:  state.snapshots.outbound,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OSTATNIE WYNIKI Z BACKENDU (żeby nowa osoba widziała wynik bez wgrywania plików)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function loadSnapshots() {
+  try {
+    const latest = await fetchLatestSnapshots();
+    state.snapshots.inbound  = latest.inbound  || null;
+    state.snapshots.outbound = latest.outbound || null;
+    refreshHomeCards();
+  } catch (err) {
+    console.error('Nie udało się wczytać ostatnich wyników z backendu:', err);
+  }
+}
+
+async function persistInboundSnapshot() {
+  if (!state.staffing) return;
+  try {
+    state.snapshots.inbound = await saveSnapshot({
+      department:     'inbound',
+      totalFte:       state.staffing.totalPeople,
+      existingRecord: state.snapshots.inbound,
+    });
+  } catch (err) {
+    console.error('Nie udało się zapisać wyniku Inbound na backendzie:', err);
+  }
+}
+
+async function persistOutboundSnapshot(totalFte) {
+  try {
+    state.snapshots.outbound = await saveSnapshot({
+      department:     'outbound',
+      totalFte,
+      existingRecord: state.snapshots.outbound,
+    });
+  } catch (err) {
+    console.error('Nie udało się zapisać wyniku Outbound na backendzie:', err);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -72,8 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderEmpty();
   renderTimesTab();
   renderOutboundIndicatorsTab(state.outbound.indicators);
-  renderHomeCards({ inboundModel: null, inboundStaffing: null, outboundTotalFte: null });
+  refreshHomeCards();
   showHome();
+  loadSnapshots();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,11 +206,7 @@ function showHome() {
   document.getElementById('main-layout')?.classList.add('hidden');
   const sub = document.getElementById('topbar-sub');
   if (sub) sub.textContent = 'Wybierz dział';
-  renderHomeCards({
-    inboundModel:     state.model,
-    inboundStaffing:  state.staffing,
-    outboundTotalFte: getOutboundTotalFte(),
-  });
+  refreshHomeCards();
 }
 
 function showDepartment(dept) {
@@ -606,12 +655,8 @@ function recomputeOutboundProcesses() {
 
   const totals = sumOutboundFteByClient(state.outbound.processes);
   renderOutboundStaffingTab(totals);
-
-  renderHomeCards({
-    inboundModel:     state.model,
-    inboundStaffing:  state.staffing,
-    outboundTotalFte: totals.totalFte,
-  });
+  refreshHomeCards();
+  persistOutboundSnapshot(totals.totalFte);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -642,11 +687,8 @@ function tryRebuildModel() {
     renderSsccTable(state.ssccInbound || []);
     renderProcessesTab(state.staffing, state.model.trucks, null);
     renderStaffingTab(state.staffing);
-    renderHomeCards({
-      inboundModel:     state.model,
-      inboundStaffing:  state.staffing,
-      outboundTotalFte: getOutboundTotalFte(),
-    });
+    refreshHomeCards();
+    persistInboundSnapshot();
     updateDataSummary();
   } catch (err) {
     console.error(err);
