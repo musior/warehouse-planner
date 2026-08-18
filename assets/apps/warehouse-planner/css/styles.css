@@ -246,6 +246,18 @@ body {
   color: var(--text-3);
 }
 
+.home-total-note {
+  font-size: 11px;
+  color: var(--text-3);
+  min-height: 14px;
+}
+
+.dept-card-last-update {
+  font-size: 10px;
+  color: var(--text-3);
+  margin-top: 8px;
+}
+
 .dept-cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
