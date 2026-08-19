@@ -249,7 +249,7 @@ export function renderDetailPanel(truck) {
           <span class="pallet-item-value">${pallets.part1}</span>
         </div>
         <div class="pallet-item">
-          <span class="pallet-item-label">Kartony bez palety (÷ 30)</span>
+          <span class="pallet-item-label">Kartony bez palety (÷ 40)</span>
           <span class="pallet-item-value">${pallets.part2}</span>
         </div>
         <div class="pallet-item">
@@ -456,7 +456,7 @@ export function renderSsccTable(rows) {
                 .filter((r) => r.packageTypeCode === "BX" && r.parentSscc)
                 .map((r) => r.parentSscc),
             );
-            const palHipo = round(pe + bxNP / 30 + parents.size, 1);
+            const palHipo = round(pe + bxNP / 40 + parents.size, 1);
             const dests = new Set(
               t.rows.map((r) => r.destinationCountryCode).filter(Boolean),
             );
