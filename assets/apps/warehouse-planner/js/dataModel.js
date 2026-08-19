@@ -5,7 +5,7 @@
 import { isSameDay, round, toNumber } from "./utils.js";
 
 // Stała: liczba kartonów BX na paletę (gdy BX nie ma rodzica)
-const BX_PER_PALLET = 30;
+const BX_PER_PALLET = 40;
 
 // ─── Fallback dla transportów bez SSCC — kraj pochodzenia Wrocław ─────────────
 // Gdy SIS nie istnieje w raporcie InboundSSCC a SOS wskazuje Wrocław,
@@ -154,11 +154,14 @@ export function buildModel({
   const trucks = [];
 
   for (const [sis, awizacja] of awizacjeBySis.entries()) {
-    // Pomiń jeśli już przyjechał (SIS jest w ssccArrived)
-    const hasArrived = arrivedSisSet.has(sis);
-
     // Pobierz wiersze SSCC dla tego SIS
     const ssccRows = ssccBySis.get(sis) || [];
+
+    // Przyjechał, jeśli SIS jest w ssccArrived/ssccOutbound LUB jego wiersze
+    // SSCC Inbound mają wypełnione EffectiveArrival (auto już pod rampą,
+    // choć SIS jeszcze nie "przeskoczył" do raportu Outbound)
+    const hasArrived =
+      arrivedSisSet.has(sis) || ssccRows.some((r) => r.effectiveArrival);
 
     // Oblicz hipotetyczną liczbę palet dla tego transportu
     const pallets = calcHypotheticalPallets(ssccRows, awizacja, hasArrived);
@@ -276,6 +279,9 @@ function computeKpiFromData(
   );
 
   const totalPalletsFromSSCC = round(totalPalletsAll + kontenerRegularPallets);
+  // Palety do rozładunku = tylko transporty jeszcze nieprzybyłe (status "inbound"),
+  // do FTE Rozładunek — przybyłe (status "arrived") są już pod rampą.
+  const totalPalletsToUnload = round(totalPalletsInbound + kontenerRegularPallets);
 
   const activeSisSet = new Set(
     awizacjeOnDate.map((a) => a.sis).filter(Boolean),
@@ -549,6 +555,7 @@ function computeKpiFromData(
     arrivedTrucks: trucksArrived.length,
     noSsccTrucks: trucksNoSscc.length,
     totalPalletsInbound: round(totalPalletsInbound),
+    totalPalletsToUnload,
     totalPalletsAll: round(totalPalletsAll),
     totalPalletsFromSSCC,
     kontenerRegularPallets,
@@ -636,7 +643,7 @@ export function buildKpiForSelection(
  * Logika (na podstawie wzoru DAX):
  *
  * Część 1: wiersze gdzie PackageTypeCode != "BX"  (PE = palety — liczymy 1:1)
- * Część 2: wiersze BX bez rodzica (ParentPackageTypeCode puste) → dziel przez BX_PER_PALLET (30)
+ * Część 2: wiersze BX bez rodzica (ParentPackageTypeCode puste) → dziel przez BX_PER_PALLET (40)
  * Część 3: unikalne numery SSCC rodziców BX (ParentPackageTypeCode wypełniony) → każdy = 1 paleta
  * Część 4: kontenery z awizacji (ST + ST2 gdzie SOS = KONTENER i status = W drodze)
  *
