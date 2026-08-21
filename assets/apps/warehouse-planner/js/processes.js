@@ -544,7 +544,7 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
   const pelnePaletyDg = kpi.pelnePaletyDg     || 0;
   const kontenerSt    = kpi.kontenerSt        || 0;
 
-  const unloading          = calcUnloading           (kpi.totalPalletsFromSSCC || 0);
+  const unloading          = calcUnloading           (kpi.totalPalletsToUnload || 0);
   const manualContainer    = calcManualContainer     (kpi.kontenerManualCartons || 0);
   const sortingDg          = calcSortingDg           (kpi.sortingDgBoxes        || 0);
   const drobnical          = calcDrobnical           (kpi.drobnicalItems         || 0);
@@ -645,7 +645,7 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
     drobnicaRampa.peopleExact + drobnicaPlac.peopleExact;
 
   return {
-    unloadingPallets:  kpi.totalPalletsFromSSCC || 0,
+    unloadingPallets:  kpi.totalPalletsToUnload || 0,
     manualCartons:     kpi.kontenerManualCartons || 0,
     dgBoxes:           kpi.sortingDgBoxes        || 0,
     dgDrobnicalItems:  kpi.drobnicalItems        || 0,
