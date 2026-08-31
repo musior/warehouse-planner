@@ -26,6 +26,9 @@
       </div>
       <div class="topbar-right">
         <span id="data-summary" class="data-summary"></span>
+        <button class="btn btn-outline" id="btn-open-report">
+          &#128202;&nbsp;Raport
+        </button>
         <button class="btn btn-primary" id="btn-upload-trigger">
           &#8679;&nbsp;Wczytaj pliki
         </button>
@@ -401,6 +404,59 @@
       </div>
     </div>
     </main>
+
+    <!-- RAPORT ZBIORCZY — Inbound + Outbound -->
+    <div id="report-view" class="dept-view hidden">
+      <div class="main-layout">
+        <div class="date-bar">
+          <div class="date-bar-left">
+            <span id="report-date-summary" class="date-bar-summary"></span>
+          </div>
+        </div>
+        <div class="report-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Volumen per proces</span>
+              <button
+                class="btn btn-outline"
+                id="btn-report-mail-volume"
+                title="Kopiuje tabelę do schowka i otwiera szkic maila"
+              >
+                &#9993;&nbsp;Wyślij mailem
+              </button>
+            </div>
+            <div id="report-volume-table-wrap" class="table-wrap">
+              <div class="empty-state">
+                <div class="empty-icon">&#128202;</div>
+                <div class="empty-text">
+                  Wczytaj dane Inbound i/lub Outbound, aby zobaczyć raport
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">FTE per proces</span>
+              <button
+                class="btn btn-outline"
+                id="btn-report-mail-fte"
+                title="Kopiuje tabelę do schowka i otwiera szkic maila"
+              >
+                &#9993;&nbsp;Wyślij mailem
+              </button>
+            </div>
+            <div id="report-fte-table-wrap" class="table-wrap">
+              <div class="empty-state">
+                <div class="empty-icon">&#128202;</div>
+                <div class="empty-text">
+                  Wczytaj dane Inbound i/lub Outbound, aby zobaczyć raport
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script
       type="module"
