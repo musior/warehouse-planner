@@ -6,6 +6,7 @@ import { formatDate, formatTime, round, isSameDay } from "./utils.js";
 import { buildSsccDetailTable } from "./dataModel.js";
 import { PROCESSES } from "./processes.js";
 import { LINE_COUNT_PROCESSES, PROCESS_GROUP_ORDER } from "./processesOutbound.js";
+import { buildReportRows } from "./report.js";
 
 // ── Stan UI ───────────────────────────────────────────────────────────────────
 let _selectedSis = null;
@@ -116,7 +117,7 @@ function buildTruckRow(t) {
       <span class="truck-time">${t.godzTime}</span>
       <span class="truck-pallets">${pallets}</span>
       <span class="truck-dest">${destStr}</span>
-      ${statusBadge(t.status)}
+      ${statusBadge(t.status)}${fallbackBadge(t.pallets)}
     </div>
   </div>`;
 }
@@ -129,6 +130,13 @@ function statusBadge(status) {
   };
   const b = map[status] || { cls: "", label: status };
   return `<span class="badge ${b.cls}">${b.label}</span>`;
+}
+
+// Transport bez numeru SIS/SSCC, dla którego przyjęto hipotetyczne palety/kartony
+// wg stałych założeń dla danego SOS (patrz SOS_FALLBACKS w dataModel.js).
+function fallbackBadge(pallets) {
+  if (!pallets?.isFallback) return "";
+  return `<span class="badge badge-hip" title="Brak numeru SIS — wartości hipotetyczne wg przyjętych założeń dla tego SOS">Hip</span>`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -159,7 +167,7 @@ export function renderDetailPanel(truck) {
     <div class="detail-header">
       <div class="detail-title">
         <span class="detail-plate">${esc(truck.sisDisplay ?? truck.sis)}</span>
-        ${statusBadge(truck.status)}
+        ${statusBadge(truck.status)}${fallbackBadge(truck.pallets)}
         ${truck.isCelne ? `<span class="badge badge-celne">CELNE</span>` : ""}
         ${truck.isKontenerManual ? `<span class="badge badge-kontener-manual">KONTENER MANUAL</span>` : truck.isKontener ? `<span class="badge badge-kontener">KONTENER</span>` : ""}
       </div>
@@ -261,6 +269,14 @@ export function renderDetailPanel(truck) {
           <span class="pallet-item-value">${pallets.total}</span>
         </div>
       </div>
+      ${
+        pallets.isFallback
+          ? `<div class="detail-note">
+               Brak numeru SIS dla tego transportu — powyższe wartości to hipotetyczne
+               założenia dla SOS „${esc(truck.sos)}”, nie dane z raportu SSCC.
+             </div>`
+          : ""
+      }
     </div>
 
     ${
@@ -1567,6 +1583,88 @@ export function renderOutboundStaffingTab(totals) {
     volCard("Linie Forecast", lineCount3m, "linii", "3M — na dzień planowania") +
     volCard("Linie Forecast", lineCountSolventum, "linii", "Solventum — na dzień planowania") +
     "</div>";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RAPORT ZBIORCZY — Volumen per proces / FTE per proces (Inbound + Outbound)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function renderReportTab({
+  staffing,
+  outboundProcesses,
+  filterDateFrom,
+  filterDateTo,
+  outboundPlanningDate,
+}) {
+  const volWrap = document.getElementById("report-volume-table-wrap");
+  const fteWrap = document.getElementById("report-fte-table-wrap");
+  const dateEl  = document.getElementById("report-date-summary");
+  if (!volWrap || !fteWrap) return;
+
+  if (dateEl) {
+    const inboundLabel = filterDateFrom
+      ? isSameDay(filterDateFrom, filterDateTo)
+        ? formatDate(filterDateFrom)
+        : `${formatDate(filterDateFrom)} — ${formatDate(filterDateTo)}`
+      : "—";
+    const outboundLabel = outboundPlanningDate ? formatDate(outboundPlanningDate) : "—";
+    dateEl.textContent = `Inbound: ${inboundLabel} · Outbound: ${outboundLabel}`;
+  }
+
+  if (!staffing && !outboundProcesses) {
+    const empty =
+      '<div class="empty-state"><div class="empty-icon">&#128202;</div>' +
+      '<div class="empty-text">Wczytaj dane Inbound i/lub Outbound, aby zobaczyć raport</div></div>';
+    volWrap.innerHTML = empty;
+    fteWrap.innerHTML = empty;
+    return;
+  }
+
+  const rows = buildReportRows(staffing, outboundProcesses);
+
+  const volRowsHtml = rows
+    .map((row) => {
+      const rowCls = row.computed ? "" : ' class="report-row-na"';
+      const hasValue = row.computed && row.volume != null;
+      return (
+        `<tr${rowCls}><td>${esc(row.label)}</td>` +
+        `<td class="num">${hasValue ? fmtNum(row.volume) : "—"}</td>` +
+        `<td>${hasValue ? esc(row.unit) : ""}</td></tr>`
+      );
+    })
+    .join("");
+
+  volWrap.innerHTML =
+    '<table class="data-table report-table">' +
+    "<thead><tr><th>Proces</th><th class=\"num\">Volumen</th><th>Jednostka</th></tr></thead>" +
+    `<tbody>${volRowsHtml}</tbody>` +
+    "</table>";
+
+  let fteProcTotal = 0;
+  let fteShiftTotal = 0;
+  const fteRowsHtml = rows
+    .map((row) => {
+      const rowCls = row.computed ? "" : ' class="report-row-na"';
+      const fteProc  = row.computed ? row.fteProcess : null;
+      const fteShift = row.computed ? row.fteShift   : null;
+      if (fteProc  != null) fteProcTotal  += fteProc;
+      if (fteShift != null) fteShiftTotal += fteShift;
+      return (
+        `<tr${rowCls}><td>${esc(row.label)}</td>` +
+        `<td class="num">${fteProc  != null ? fmtNum(fteProc)  : "—"}</td>` +
+        `<td class="num">${fteShift != null ? fmtNum(fteShift) : "—"}</td></tr>`
+      );
+    })
+    .join("");
+
+  fteWrap.innerHTML =
+    '<table class="data-table report-table">' +
+    "<thead><tr><th>Proces</th><th class=\"num\">FTE per proces</th><th class=\"num\">FTE per zmianę</th></tr></thead>" +
+    `<tbody>${fteRowsHtml}` +
+    '<tr class="report-total-row"><td>Razem</td>' +
+    `<td class="num bold">${fmtNum(round(fteProcTotal, 2))}</td>` +
+    `<td class="num bold">${fmtNum(round(fteShiftTotal, 1))}</td></tr>` +
+    "</tbody></table>";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

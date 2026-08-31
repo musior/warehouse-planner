@@ -34,6 +34,7 @@ const SOS_FALLBACKS = {
   francja: { st: 34, st2: 43, ac2: 3 },
   dalpex: { st: 21, st2: 0, ac2: 0 },
   armes: { st: 18, st2: 0, ac2: 0 },
+  juechen: { st: 0, st2: 20, ac2: 1200 },
 };
 
 /** Zwraca obiekt fallback dla danego SOS lub null gdy brak dopasowania. */
@@ -48,6 +49,7 @@ function getSosFallback(sos) {
   if (s.includes("francj") || s.includes("france"))
     return SOS_FALLBACKS.francja;
   if (s.includes("dalpex")) return SOS_FALLBACKS.dalpex;
+  if (s.includes("juchen") || s.includes("juechen")) return SOS_FALLBACKS.juechen;
   return null;
 }
 

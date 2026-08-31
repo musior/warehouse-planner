@@ -9,14 +9,16 @@ import { initUI, renderDashboard, renderAwizacjeTable, renderSsccTable,
          renderProcessesTab, renderTimesTab, renderStaffingTab,
          updateFileStatus, updateSlotUI, renderHomeCards,
          renderOutboundIndicatorsTab, renderOutboundProcessesTab,
-         renderOutboundStaffingTab } from './ui.js';
-import { tomorrow, today, formatDate, isSameDay } from './utils.js';
+         renderOutboundStaffingTab, renderReportTab } from './ui.js';
+import { tomorrow, today, formatDate, isSameDay, copyHtmlToClipboard } from './utils.js';
 import { calcAllProcesses }                      from './processes.js';
 import { loadOutboundIndicators, setOutboundIndicatorField } from './outboundIndicators.js';
 import { parseForecastCsv }                      from './parsersOutbound.js';
 import { calcAllOutboundProcesses, sumOutboundFteByClient,
          getDefaultOutboundPlanningDate }                from './processesOutbound.js';
 import { fetchLatestSnapshots, saveSnapshot }             from './planningSnapshotApi.js';
+import { buildReportRows, buildVolumeMailTableHtml, buildFteMailTableHtml,
+         getMailPlanningDateLabel, VOLUME_MAIL, FTE_MAIL } from './report.js';
 
 // ── Stan aplikacji ────────────────────────────────────────────────────────────
 const state = {
@@ -53,6 +55,16 @@ function refreshHomeCards() {
     outboundTotalFte:  getOutboundTotalFte(),
     inboundSnapshot:   state.snapshots.inbound,
     outboundSnapshot:  state.snapshots.outbound,
+  });
+}
+
+function refreshReportTab(staffingOverride) {
+  renderReportTab({
+    staffing:              staffingOverride || state.staffing,
+    outboundProcesses:     state.outbound.processes,
+    filterDateFrom:        state.filterDateFrom,
+    filterDateTo:          state.filterDateTo,
+    outboundPlanningDate:  state.outbound.planningDate,
   });
 }
 
@@ -118,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupHomeNavigation();
   setupOutboundIndicators();
   setupOutboundDateBar();
+  setupReportMailButtons();
 
   applyDateToInputs();
   applyOutboundDateToInput();
@@ -125,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTimesTab();
   renderOutboundIndicatorsTab(state.outbound.indicators);
   refreshHomeCards();
+  refreshReportTab();
   showHome();
   loadSnapshots();
 });
@@ -198,12 +212,14 @@ function setupHomeNavigation() {
     card.addEventListener('click', () => showDepartment(card.dataset.dept));
   });
   document.getElementById('btn-go-home')?.addEventListener('click', showHome);
+  document.getElementById('btn-open-report')?.addEventListener('click', showReport);
 }
 
 function showHome() {
   state.currentDepartment = null;
   document.getElementById('home-view')?.classList.remove('hidden');
   document.getElementById('main-layout')?.classList.add('hidden');
+  document.getElementById('report-view')?.classList.add('hidden');
   const sub = document.getElementById('topbar-sub');
   if (sub) sub.textContent = 'Wybierz dział';
   refreshHomeCards();
@@ -213,10 +229,73 @@ function showDepartment(dept) {
   state.currentDepartment = dept;
   document.getElementById('home-view')?.classList.add('hidden');
   document.getElementById('main-layout')?.classList.remove('hidden');
+  document.getElementById('report-view')?.classList.add('hidden');
   document.getElementById('dept-inbound')?.classList.toggle('hidden', dept !== 'inbound');
   document.getElementById('dept-outbound')?.classList.toggle('hidden', dept !== 'outbound');
   const sub = document.getElementById('topbar-sub');
   if (sub) sub.textContent = dept === 'outbound' ? 'Magazyn outbound' : 'Magazyn inbound';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RAPORT — WYSYŁKA MAILEM (kopiuje tabelę do schowka + otwiera szkic maila)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setupReportMailButtons() {
+  document.getElementById('btn-report-mail-volume')?.addEventListener('click', handleSendVolumeMail);
+  document.getElementById('btn-report-mail-fte')?.addEventListener('click', handleSendFteMail);
+}
+
+// encodeURIComponent (nie URLSearchParams) — mailto: to nie formularz,
+// spacje mają być %20, a nie "+" (część klientów pocztowych pokazuje "+" dosłownie).
+function openMailDraft({ to, cc, subject, body }) {
+  const query = [
+    `cc=${encodeURIComponent(cc.join(','))}`,
+    `subject=${encodeURIComponent(subject)}`,
+    `body=${encodeURIComponent(body)}`,
+  ].join('&');
+  window.location.href = `mailto:${to}?${query}`;
+}
+
+async function copyTableAndNotify(html) {
+  const copied = await copyHtmlToClipboard(html);
+  showToast(
+    copied
+      ? 'Tabela skopiowana do schowka — wklej ją (Ctrl+V) w treści maila.'
+      : 'Nie udało się skopiować tabeli do schowka — skopiuj ją ręcznie z widoku raportu.',
+    copied ? 'success' : 'error',
+  );
+}
+
+async function handleSendVolumeMail() {
+  const rows = buildReportRows(state.staffing, state.outbound.processes);
+  await copyTableAndNotify(buildVolumeMailTableHtml(rows));
+  openMailDraft({
+    to:      VOLUME_MAIL.to,
+    cc:      VOLUME_MAIL.cc,
+    subject: VOLUME_MAIL.subject,
+    body:    `Zamawianie usługi na dzień ${getMailPlanningDateLabel()}.`,
+  });
+}
+
+async function handleSendFteMail() {
+  const rows = buildReportRows(state.staffing, state.outbound.processes);
+  await copyTableAndNotify(buildFteMailTableHtml(rows));
+  openMailDraft({
+    to:      FTE_MAIL.to,
+    cc:      FTE_MAIL.cc,
+    subject: FTE_MAIL.subject,
+    body:    `Planowanie na dzień ${getMailPlanningDateLabel()}.`,
+  });
+}
+
+function showReport() {
+  state.currentDepartment = null;
+  document.getElementById('home-view')?.classList.add('hidden');
+  document.getElementById('main-layout')?.classList.add('hidden');
+  document.getElementById('report-view')?.classList.remove('hidden');
+  const sub = document.getElementById('topbar-sub');
+  if (sub) sub.textContent = 'Raport zbiorczy';
+  refreshReportTab();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,6 +341,7 @@ function recomputeProcessesForSelection() {
   const staffing = calcAllProcesses(kpi);
   renderProcessesTab(staffing, state.model.trucks, state.selectedSisSet);
   renderStaffingTab(staffing);
+  refreshReportTab(staffing);
 
   // Przywróć stan indeterminate po ponownym renderze
   if (state.selectedSisSet !== null && state.selectedSisSet.size > 0) {
@@ -656,6 +736,7 @@ function recomputeOutboundProcesses() {
   const totals = sumOutboundFteByClient(state.outbound.processes);
   renderOutboundStaffingTab(totals);
   refreshHomeCards();
+  refreshReportTab();
   persistOutboundSnapshot(totals.totalFte);
 }
 
@@ -688,6 +769,7 @@ function tryRebuildModel() {
     renderProcessesTab(state.staffing, state.model.trucks, null);
     renderStaffingTab(state.staffing);
     refreshHomeCards();
+    refreshReportTab();
     persistInboundSnapshot();
     updateDataSummary();
   } catch (err) {
@@ -707,12 +789,17 @@ function updateDataSummary() {
   el.textContent = `${m.awizacjeOnDate.length} awizacji · ${m.ssccInbound.length} wierszy SSCC`;
 }
 
-function showError(msg) {
+function showToast(msg, type = 'error') {
   const el = document.getElementById('error-toast');
   if (!el) return;
   el.textContent = msg;
+  el.classList.toggle('toast-success', type === 'success');
   el.classList.remove('hidden');
   setTimeout(() => el.classList.add('hidden'), 6000);
+}
+
+function showError(msg) {
+  showToast(msg, 'error');
 }
 
 function readFile(file) {
