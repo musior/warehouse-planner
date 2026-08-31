@@ -133,3 +133,30 @@ export function round(value, decimals = 1) {
   const factor = Math.pow(10, decimals);
   return Math.round(value * factor) / factor;
 }
+
+/**
+ * Kopiuje HTML do schowka (jako text/html, żeby wklejenie w treści maila
+ * zachowało tabelę) z fallbackiem do zwykłego tekstu w starszych
+ * przeglądarkach / kontekstach bez ClipboardItem.
+ * Zwraca true/false w zależności od powodzenia.
+ */
+export async function copyHtmlToClipboard(html, plainText) {
+  const text = plainText ?? html.replace(/<[^>]+>/g, "");
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      const item = new ClipboardItem({
+        "text/html":  new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" }),
+      });
+      await navigator.clipboard.write([item]);
+      return true;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.error("Kopiowanie do schowka nie powiodło się:", err);
+  }
+  return false;
+}
