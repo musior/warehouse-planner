@@ -748,6 +748,11 @@ body {
   background: var(--purple-bg);
   color: var(--purple);
 }
+.badge-hip {
+  background: var(--purple-bg);
+  color: var(--purple);
+  border: 1px dashed var(--purple);
+}
 .badge-type {
   background: var(--bg);
   color: var(--text-2);
@@ -969,6 +974,9 @@ body {
 .error-toast.hidden {
   display: none;
 }
+.error-toast.toast-success {
+  background: var(--green);
+}
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -1186,6 +1194,35 @@ body {
   color: var(--text-1);
 }
 .data-table td.bold {
+  font-weight: 600;
+}
+
+/* ── Raport zbiorczy ──────────────────────────────────────────────────────── */
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+@media (max-width: 900px) {
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+tr.report-row-na td {
+  color: var(--red);
+}
+
+tr.report-total-row td {
+  border-top: 2px solid var(--border-md);
   font-weight: 600;
 }
 
