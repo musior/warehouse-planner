@@ -18,9 +18,31 @@
 
 const API_BASE = "https://cloud.fiege.pl/api/apps/warehouse-planner/";
 
-/** Login zalogowanego pracownika — null, jeśli platforma xcloud nie jest dostępna. */
-export function getCurrentUsername() {
-  return window?.xcloud?.account?.username || null;
+/**
+ * Aplikacja jest osadzona w iframe na platformie cloud.fiege.pl — window.xcloud
+ * istnieje w oknie NADRZĘDNYM (window.parent), a nie w oknie samego iframe'a.
+ * Dostęp do window.parent może rzucić (obcy origin), stąd try/catch.
+ */
+function getXcloudAccount() {
+  try {
+    if (window?.xcloud?.account) return window.xcloud.account;
+  } catch {
+    // ignoruj
+  }
+  try {
+    if (window.parent && window.parent !== window && window.parent.xcloud?.account) {
+      return window.parent.xcloud.account;
+    }
+  } catch {
+    // window.parent niedostępne (obcy origin) — platforma xcloud nie jest dostępna
+  }
+  return null;
+}
+
+/** Imię i nazwisko zalogowanego pracownika — null, jeśli platforma xcloud nie jest dostępna. */
+export function getCurrentUserFullname() {
+  const account = getXcloudAccount();
+  return account?.fullname || account?.username || null;
 }
 
 function parseMeta(raw) {
@@ -76,13 +98,13 @@ export async function fetchLatestSnapshots() {
  * z poprzedniego meta; w przeciwnym razie tworzy nowy rekord przez POST.
  */
 export async function saveSnapshot({ department, totalFte, existingRecord }) {
-  const username = getCurrentUsername();
+  const fullname = getCurrentUserFullname();
   const nowIso = new Date().toISOString();
 
   if (existingRecord?.id) {
     const meta = {
       ...existingRecord.meta,
-      updated_by: username,
+      updated_by: fullname,
       updated_at: nowIso,
     };
     const res = await fetch(`${API_BASE}${existingRecord.id}`, {
@@ -97,8 +119,8 @@ export async function saveSnapshot({ department, totalFte, existingRecord }) {
   }
 
   const meta = {
-    created_by: username,
-    updated_by: username,
+    created_by: fullname,
+    updated_by: fullname,
     updated_at: nowIso,
   };
   const res = await fetch(API_BASE, {
