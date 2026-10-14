@@ -4,10 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Planowanie Zasobów — Magazyn</title>
-    <link
-      rel="stylesheet"
-      href="/assets/apps/warehouse-planner/css/styles.css?=v1.0"
-    />
+    <link rel="stylesheet" href="/assets/css/styles.css?=v1.0" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   </head>
   <body>
@@ -16,7 +13,11 @@
     <!-- TOP BAR -->
     <header class="topbar">
       <div class="topbar-left">
-        <button class="topbar-title-group" id="btn-go-home" title="Wróć do strony głównej">
+        <button
+          class="topbar-title-group"
+          id="btn-go-home"
+          title="Wróć do strony głównej"
+        >
           <div class="topbar-logo">&#9664;&#9654;</div>
           <div class="topbar-title-text">
             <span class="topbar-title">Planowanie Zasobów</span>
@@ -39,7 +40,9 @@
     <div id="home-view" class="home-view">
       <div class="home-view-inner">
         <h1 class="home-title">Planowanie Zasobów</h1>
-        <p class="home-subtitle">Wybierz dział, aby zobaczyć szczegóły planowania</p>
+        <p class="home-subtitle">
+          Wybierz dział, aby zobaczyć szczegóły planowania
+        </p>
         <div class="home-total-card" id="home-total-card">
           <div class="home-total-label">FTE Total — Inbound + Outbound</div>
           <div class="home-total-value" id="home-total-value">—</div>
@@ -51,7 +54,9 @@
             <div class="dept-card-name">Inbound</div>
             <div class="dept-card-desc">Przyjęcie towaru na magazyn</div>
             <div class="dept-card-kpis" id="dept-card-kpis-inbound">
-              <div class="dept-card-empty">Wczytaj pliki, aby zobaczyć wyniki</div>
+              <div class="dept-card-empty">
+                Wczytaj pliki, aby zobaczyć wyniki
+              </div>
             </div>
           </button>
           <button class="dept-card dept-card--placeholder" data-dept="outbound">
@@ -59,7 +64,9 @@
             <div class="dept-card-name">Outbound</div>
             <div class="dept-card-desc">Wysyłka towaru z magazynu</div>
             <div class="dept-card-kpis" id="dept-card-kpis-outbound">
-              <div class="dept-card-empty">Brak danych — funkcja w budowie</div>
+              <div class="dept-card-empty">
+                Wczytaj pliki, aby zobaczyć wyniki
+              </div>
             </div>
           </button>
         </div>
@@ -151,7 +158,9 @@
             Forecast 3M
           </div>
           <div class="file-status-item">
-            <span class="file-status-icon" id="file-status-outbound-forecast-solventum"
+            <span
+              class="file-status-icon"
+              id="file-status-outbound-forecast-solventum"
               >○</span
             >
             Forecast Solventum
@@ -167,242 +176,259 @@
 
     <!-- MAIN -->
     <main class="main-layout hidden" id="main-layout">
-    <div id="dept-inbound" class="dept-view">
-      <!-- PASEK DATY I FILTRÓW -->
-      <div class="date-bar">
-        <div class="date-bar-left">
-          <button
-            class="btn-date-nav"
-            id="btn-date-prev"
-            title="Poprzedni dzień"
-          >
-            &#8592;
-          </button>
-          <div class="date-range-controls">
-            <label class="date-label">Od:</label>
-            <input type="date" id="filter-date-from" class="date-input" />
-            <label class="date-label">Do:</label>
-            <input type="date" id="filter-date-to" class="date-input" />
-          </div>
-          <button
-            class="btn-date-nav"
-            id="btn-date-next"
-            title="Następny dzień"
-          >
-            &#8594;
-          </button>
-          <div class="date-presets">
-            <button class="btn-preset active" data-preset="tomorrow">
-              Jutro
+      <div id="dept-inbound" class="dept-view">
+        <!-- PASEK DATY I FILTRÓW -->
+        <div class="date-bar">
+          <div class="date-bar-left">
+            <button
+              class="btn-date-nav"
+              id="btn-date-prev"
+              title="Poprzedni dzień"
+            >
+              &#8592;
             </button>
-            <button class="btn-preset" data-preset="today">Dziś</button>
-            <button class="btn-preset" data-preset="3days">3 dni</button>
-            <button class="btn-preset" data-preset="week">Tydzień</button>
+            <div class="date-range-controls">
+              <label class="date-label">Od:</label>
+              <input type="date" id="filter-date-from" class="date-input" />
+              <label class="date-label">Do:</label>
+              <input type="date" id="filter-date-to" class="date-input" />
+            </div>
+            <button
+              class="btn-date-nav"
+              id="btn-date-next"
+              title="Następny dzień"
+            >
+              &#8594;
+            </button>
+            <div class="date-presets">
+              <button class="btn-preset active" data-preset="tomorrow">
+                Jutro
+              </button>
+              <button class="btn-preset" data-preset="today">Dziś</button>
+              <button class="btn-preset" data-preset="3days">3 dni</button>
+              <button class="btn-preset" data-preset="week">Tydzień</button>
+            </div>
+          </div>
+          <div class="date-bar-right">
+            <span id="date-bar-summary" class="date-bar-summary"></span>
           </div>
         </div>
-        <div class="date-bar-right">
-          <span id="date-bar-summary" class="date-bar-summary"></span>
+
+        <nav class="tabs-nav">
+          <button class="tab active" data-tab="staffing">
+            Planowanie ludzi
+          </button>
+          <button class="tab" data-tab="processes">Procesy</button>
+          <button class="tab" data-tab="overview">Przegląd</button>
+          <button class="tab" data-tab="awizacje">Awizacje</button>
+          <button class="tab" data-tab="sscc">Raport SSCC</button>
+          <button class="tab" data-tab="times">Czasy</button>
+        </nav>
+
+        <!-- PRZEGLĄD -->
+        <div class="tab-panel hidden" data-panel="overview">
+          <div id="kpi-row" class="kpi-row"></div>
+          <div class="overview-grid">
+            <div class="overview-left">
+              <div class="panel">
+                <div class="panel-header">
+                  <span class="panel-title" id="truck-list-title"
+                    >Transporty</span
+                  >
+                  <input
+                    type="text"
+                    id="truck-search"
+                    class="search-input"
+                    placeholder="Nr rej., SIS, SOS…"
+                  />
+                </div>
+                <div class="truck-list-filters">
+                  <button class="btn-filter active" data-filter="all">
+                    Wszystkie
+                  </button>
+                  <button class="btn-filter" data-filter="inbound">
+                    W drodze
+                  </button>
+                  <button class="btn-filter" data-filter="arrived">
+                    Przybyłe
+                  </button>
+                  <button class="btn-filter" data-filter="no-sscc">
+                    Brak SSCC
+                  </button>
+                </div>
+                <div id="truck-list" class="truck-list"></div>
+              </div>
+            </div>
+            <div class="overview-right">
+              <div class="panel">
+                <div class="panel-header">
+                  <span class="panel-title">Szczegóły transportu</span>
+                </div>
+                <div id="detail-panel" class="detail-panel"></div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <nav class="tabs-nav">
-        <button class="tab active" data-tab="staffing">Planowanie ludzi</button>
-        <button class="tab" data-tab="processes">Procesy</button>
-        <button class="tab" data-tab="overview">Przegląd</button>
-        <button class="tab" data-tab="awizacje">Awizacje</button>
-        <button class="tab" data-tab="sscc">Raport SSCC</button>
-        <button class="tab" data-tab="times">Czasy</button>
-      </nav>
-
-      <!-- PRZEGLĄD -->
-      <div class="tab-panel hidden" data-panel="overview">
-        <div id="kpi-row" class="kpi-row"></div>
-        <div class="overview-grid">
-          <div class="overview-left">
-            <div class="panel">
-              <div class="panel-header">
-                <span class="panel-title" id="truck-list-title"
-                  >Transporty</span
-                >
+        <!-- AWIZACJE -->
+        <div class="tab-panel hidden" data-panel="awizacje">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Awizacje</span>
+              <div class="panel-controls">
                 <input
                   type="text"
-                  id="truck-search"
+                  id="awizacje-search"
                   class="search-input"
-                  placeholder="Nr rej., SIS, SOS…"
+                  placeholder="Szukaj…"
                 />
               </div>
-              <div class="truck-list-filters">
-                <button class="btn-filter active" data-filter="all">
-                  Wszystkie
-                </button>
-                <button class="btn-filter" data-filter="inbound">
-                  W drodze
-                </button>
-                <button class="btn-filter" data-filter="arrived">
-                  Przybyłe
-                </button>
-                <button class="btn-filter" data-filter="no-sscc">
-                  Brak SSCC
-                </button>
-              </div>
-              <div id="truck-list" class="truck-list"></div>
             </div>
-          </div>
-          <div class="overview-right">
-            <div class="panel">
-              <div class="panel-header">
-                <span class="panel-title">Szczegóły transportu</span>
-              </div>
-              <div id="detail-panel" class="detail-panel"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- AWIZACJE -->
-      <div class="tab-panel hidden" data-panel="awizacje">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Awizacje</span>
-            <div class="panel-controls">
-              <input
-                type="text"
-                id="awizacje-search"
-                class="search-input"
-                placeholder="Szukaj…"
-              />
-            </div>
-          </div>
-          <div id="awizacje-table-wrap" class="table-wrap">
-            <div class="empty-state">
-              <div class="empty-icon">&#128196;</div>
-              <div class="empty-text">Wczytaj plik Awizacje</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SSCC -->
-      <div class="tab-panel hidden" data-panel="sscc">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Raport SSCC Inbound</span>
-            <div class="panel-controls">
-              <input
-                type="text"
-                id="sscc-search"
-                class="search-input"
-                placeholder="SIS, rejestracja…"
-              />
-            </div>
-          </div>
-          <div id="sscc-table-wrap" class="table-wrap">
-            <div class="empty-state">
-              <div class="empty-icon">&#128666;</div>
-              <div class="empty-text">Wczytaj plik SSCC Inbound</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PROCESY -->
-      <div class="tab-panel hidden" data-panel="processes">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Procesy — zapotrzebowanie na ludzi</span>
-          </div>
-          <div id="processes-content">
-            <div class="empty-state">
-              <div class="empty-icon">&#9881;</div>
-              <div class="empty-text">
-                Wczytaj pliki aby zobaczyć obliczenia
+            <div id="awizacje-table-wrap" class="table-wrap">
+              <div class="empty-state">
+                <div class="empty-icon">&#128196;</div>
+                <div class="empty-text">Wczytaj plik Awizacje</div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- CZASY PROCESÓW -->
-      <div class="tab-panel hidden" data-panel="times">
-        <div class="panel panel--fit">
-          <div class="panel-header">
-            <span class="panel-title">Czasy procesów</span>
+        <!-- SSCC -->
+        <div class="tab-panel hidden" data-panel="sscc">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Raport SSCC Inbound</span>
+              <div class="panel-controls">
+                <input
+                  type="text"
+                  id="sscc-search"
+                  class="search-input"
+                  placeholder="SIS, rejestracja…"
+                />
+              </div>
+            </div>
+            <div id="sscc-table-wrap" class="table-wrap">
+              <div class="empty-state">
+                <div class="empty-icon">&#128666;</div>
+                <div class="empty-text">Wczytaj plik SSCC Inbound</div>
+              </div>
+            </div>
           </div>
-          <div id="times-content"></div>
+        </div>
+
+        <!-- PROCESY -->
+        <div class="tab-panel hidden" data-panel="processes">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"
+                >Procesy — zapotrzebowanie na ludzi</span
+              >
+            </div>
+            <div id="processes-content">
+              <div class="empty-state">
+                <div class="empty-icon">&#9881;</div>
+                <div class="empty-text">
+                  Wczytaj pliki aby zobaczyć obliczenia
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CZASY PROCESÓW -->
+        <div class="tab-panel hidden" data-panel="times">
+          <div class="panel panel--fit">
+            <div class="panel-header">
+              <span class="panel-title">Czasy procesów</span>
+            </div>
+            <div id="times-content"></div>
+          </div>
+        </div>
+
+        <!-- PLANOWANIE LUDZI -->
+        <div class="tab-panel" data-panel="staffing">
+          <div id="staffing-content">
+            <div class="empty-state">
+              <div class="empty-icon">&#128101;</div>
+              <div class="empty-text">Wczytaj dane aby zobaczyć planowanie</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- PLANOWANIE LUDZI -->
-      <div class="tab-panel" data-panel="staffing">
-        <div id="staffing-content">
-          <div class="empty-state">
-            <div class="empty-icon">&#128101;</div>
-            <div class="empty-text">Wczytaj dane aby zobaczyć planowanie</div>
+      <div id="dept-outbound" class="dept-view hidden">
+        <!-- PASEK DATY PLANOWANIA -->
+        <div class="date-bar">
+          <div class="date-bar-left">
+            <label class="date-label">Dzień planowania:</label>
+            <input type="date" id="outbound-planning-date" class="date-input" />
+            <button
+              class="btn btn-outline"
+              id="btn-outbound-date-reset"
+              title="Przywróć domyślny dzień planowania (najbliższy dzień roboczy)"
+            >
+              Domyślny
+            </button>
+          </div>
+          <div class="date-bar-right">
+            <span
+              id="outbound-date-bar-summary"
+              class="date-bar-summary"
+            ></span>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div id="dept-outbound" class="dept-view hidden">
-      <!-- PASEK DATY PLANOWANIA -->
-      <div class="date-bar">
-        <div class="date-bar-left">
-          <label class="date-label">Dzień planowania:</label>
-          <input type="date" id="outbound-planning-date" class="date-input" />
-          <button
-            class="btn btn-outline"
-            id="btn-outbound-date-reset"
-            title="Przywróć domyślny dzień planowania (najbliższy dzień roboczy)"
-          >
-            Domyślny
+        <nav class="tabs-nav">
+          <button class="tab active" data-tab="outbound-staffing">
+            Planowanie ludzi
           </button>
-        </div>
-        <div class="date-bar-right">
-          <span id="outbound-date-bar-summary" class="date-bar-summary"></span>
-        </div>
-      </div>
+          <button class="tab" data-tab="outbound-processes">Procesy</button>
+          <button class="tab" data-tab="outbound-indicators">
+            Wskaźniki logistyczne
+          </button>
+        </nav>
 
-      <nav class="tabs-nav">
-        <button class="tab active" data-tab="outbound-staffing">Planowanie ludzi</button>
-        <button class="tab" data-tab="outbound-processes">Procesy</button>
-        <button class="tab" data-tab="outbound-indicators">Wskaźniki logistyczne</button>
-      </nav>
-
-      <!-- OUTBOUND — PLANOWANIE LUDZI -->
-      <div class="tab-panel" data-panel="outbound-staffing">
-        <div id="outbound-staffing-content">
-          <div class="empty-state">
-            <div class="empty-icon">&#128101;</div>
-            <div class="empty-text">Wczytaj dane Outbound, aby zobaczyć planowanie</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- OUTBOUND — PROCESY -->
-      <div class="tab-panel hidden" data-panel="outbound-processes">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Procesy — zapotrzebowanie na ludzi</span>
-          </div>
-          <div id="outbound-processes-content">
+        <!-- OUTBOUND — PLANOWANIE LUDZI -->
+        <div class="tab-panel" data-panel="outbound-staffing">
+          <div id="outbound-staffing-content">
             <div class="empty-state">
-              <div class="empty-icon">&#9881;</div>
-              <div class="empty-text">Wczytaj dane Outbound, aby zobaczyć obliczenia</div>
+              <div class="empty-icon">&#128101;</div>
+              <div class="empty-text">
+                Wczytaj dane Outbound, aby zobaczyć planowanie
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- OUTBOUND — WSKAŹNIKI LOGISTYCZNE -->
-      <div class="tab-panel hidden" data-panel="outbound-indicators">
-        <div class="panel panel--fit">
-          <div class="panel-header">
-            <span class="panel-title">Wskaźniki logistyczne</span>
+        <!-- OUTBOUND — PROCESY -->
+        <div class="tab-panel hidden" data-panel="outbound-processes">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"
+                >Procesy — zapotrzebowanie na ludzi</span
+              >
+            </div>
+            <div id="outbound-processes-content">
+              <div class="empty-state">
+                <div class="empty-icon">&#9881;</div>
+                <div class="empty-text">
+                  Wczytaj dane Outbound, aby zobaczyć obliczenia
+                </div>
+              </div>
+            </div>
           </div>
-          <div id="outbound-indicators-content"></div>
+        </div>
+
+        <!-- OUTBOUND — WSKAŹNIKI LOGISTYCZNE -->
+        <div class="tab-panel hidden" data-panel="outbound-indicators">
+          <div class="panel panel--fit">
+            <div class="panel-header">
+              <span class="panel-title">Wskaźniki logistyczne</span>
+            </div>
+            <div id="outbound-indicators-content"></div>
+          </div>
         </div>
       </div>
-    </div>
     </main>
 
     <!-- RAPORT ZBIORCZY — Inbound + Outbound -->
@@ -458,9 +484,6 @@
       </div>
     </div>
 
-    <script
-      type="module"
-      src="/assets/apps/warehouse-planner/js/app.js"
-    ></script>
+    <script type="module" src="/assets/js/app.js"></script>
   </body>
 </html>
