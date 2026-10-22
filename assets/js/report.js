@@ -31,21 +31,21 @@ export const REPORT_ROWS = [
   },
   {
     id: "pickByOrderMezzanine",
-    label: "Pick by Order - Mezzanine",
+    label: "Pick by Order - Antresola",
     unit: "karton",
     source: "outbound",
     key: "pickByOrderMezzanine",
   },
   {
     id: "pickByItemMezzanine",
-    label: "Pick by Item - Mezzanine",
+    label: "Pick by Item - Antresola",
     unit: "karton",
     source: "outbound",
     key: "pickByItemMezzanine",
   },
   {
     id: "fullPallets",
-    label: "Full pallets",
+    label: "Pełne palety",
     unit: "paleta",
     source: "outbound",
     key: "fullPalletsMission",
@@ -66,90 +66,139 @@ export const REPORT_ROWS = [
   },
   {
     id: "foilingCross",
-    label: "Foiling (system + cross)",
+    label: "Foliowanie (system + cross)",
     unit: "paleta",
     source: "outbound",
     key: "palletsFoiling",
   },
   {
     id: "loadingPallets",
-    label: "Loading pallets (system + cross)",
+    label: "Załadunek palet (system + cross)",
     unit: "paleta",
     source: null,
+    fteSource: "outbound",
+    fteKeys: ["palletsLoading", "palletsLoadingXDock"],
   },
   {
     id: "loadingBoxes",
-    label: "Loading boxes (system + cross)",
+    label: "Załadunek boxów (system + cross)",
     unit: "karton",
     source: null,
+    fteSource: "outbound",
+    fteKeys: ["boxesLoading", "boxesLoadingXDock"],
   },
-  { id: "exports", label: "Exports", unit: "—", source: null },
-  { id: "repalletizing", label: "Repalletizing", unit: "—", source: null },
-  { id: "checkPack", label: "Check&Pack", unit: "—", source: null },
   {
-    id: "consolidationPbi",
-    label: "Consolidation PBI",
+    id: "exports",
+    label: "Exporty",
     unit: "—",
     source: null,
+    fteSource: "outbound",
+    fteKeys: ["exports"],
+  },
+  {
+    id: "repalletizing",
+    label: "Przekładanie palet",
+    unit: "—",
+    source: null,
+    fteSource: "outbound",
+    fteKeys: ["palletChange"],
+  },
+  {
+    id: "checkPack",
+    label: "Check&Pack PBO",
+    unit: "—",
+    source: null,
+    fteSource: "outbound",
+    fteKeys: ["checkPackPbo"],
+  },
+  {
+    id: "checkPackPbi",
+    label: "Check&Pack PBI",
+    unit: "—",
+    source: null,
+    fteSource: "outbound",
+    fteKeys: ["checkPackPbi"],
   },
   {
     id: "checkPackParcels",
-    label: "Check&Pack Parcels",
+    label: "Check&Pack DPD",
     unit: "—",
     source: null,
+    fteSource: "outbound",
+    fteKeys: ["checkPackDpd"],
   },
-  { id: "unloadingPallet", label: "Unloading pallet", unit: "—", source: null },
-  { id: "unloadingBox", label: "Unloading box", unit: "—", source: null },
+  {
+    id: "unloadingPallet",
+    label: "Rozładunek palet",
+    unit: "—",
+    source: null,
+    fteSource: "inbound",
+    fteKeys: ["unloading"],
+  },
+  {
+    id: "unloadingBox",
+    label: "Rozładunek kontenera manualnego",
+    unit: "—",
+    source: null,
+    fteSource: "inbound",
+    fteKeys: ["manualContainer"],
+  },
   {
     id: "palletSorting",
-    label: "Pallet sorting",
+    label: "Przygotowanie palet",
     unit: "paleta",
     source: "inbound",
     key: "przygotowaniePalet",
   },
   {
     id: "receivingFullPallet",
-    label: "Receiving Full Pallet",
+    label: "Wstawianie palet",
     unit: "paleta",
     source: "inbound",
-    key: "unloading",
+    key: "wstawianiePalet",
   },
   {
     id: "boxSorting",
-    label: "Box sorting",
+    label: "Sortowanie",
     unit: "karton",
     source: "inbound",
     key: "sortingDg",
   },
   {
     id: "receivingBox",
-    label: "Receiving box",
-    unit: "karton",
+    label: "Wstawianie drobnicy",
+    unit: "poz. ATII",
     source: "inbound",
-    key: "manualContainer",
+    key: "drobnical",
   },
   {
     id: "crossDockRecon",
-    label: "Cross Dock - recon.",
+    label: "Rekonstrukcja CROSS",
     unit: "paleta",
     source: "inbound",
     key: "recoCross",
   },
   {
     id: "crossDockSorting",
-    label: "Cross Dock - sorting",
+    label: "Sortowanie CROSS",
     unit: "karton",
     source: "inbound",
     key: "sortingCross",
   },
   {
     id: "vasLabels",
-    label: "VAS labels",
+    label: "VAS",
     unit: "etykieta",
     source: "outbound",
     key: "vas",
   },
 ];
+
+// Wiersze z fteKeys są tylko w raporcie FTE — nie pokazujemy ich w tabeli
+// "Volumen per proces" ani w mailu z Volumenem.
+export function isVolumeRow(row) {
+  return !row.fteKeys;
+}
 
 function sumOutboundField(processesResult, key, field) {
   const result = processesResult?.[key];
@@ -165,15 +214,32 @@ function sumOutboundField(processesResult, key, field) {
  * per proces / FTE per zmianę = fteProcess / 3). Wartość null = brak danych
  * (albo proces jeszcze nie wgrany, albo w ogóle nie liczony w aplikacji).
  */
+// Suma FTE z kilku procesów (fteKeys) — dla wierszy, które w raporcie mają
+// tylko FTE, bez Volumenu. null, gdy żaden z procesów nie jest policzony.
+function sumFteKeys(def, staffing, outboundProcesses) {
+  let total = null;
+  for (const key of def.fteKeys) {
+    const fte =
+      def.fteSource === "inbound"
+        ? (staffing?.processes?.[key]?.peopleExact ?? null)
+        : sumOutboundField(outboundProcesses, key, "fte");
+    if (fte != null) total = (total ?? 0) + fte;
+  }
+  return total != null ? round(total, 2) : null;
+}
+
 export function buildReportRows(staffing, outboundProcesses) {
   return REPORT_ROWS.map((def) => {
     if (!def.source) {
+      const fteProcess = def.fteKeys
+        ? sumFteKeys(def, staffing, outboundProcesses)
+        : null;
       return {
         ...def,
         computed: false,
         volume: null,
-        fteProcess: null,
-        fteShift: null,
+        fteProcess,
+        fteShift: fteProcess != null ? round(fteProcess / 3, 1) : null,
       };
     }
 
@@ -268,6 +334,7 @@ export function buildVolumeMailTableHtml(rows) {
     `<th ${MAIL_TABLE_CELL.th}>Jednostka</th></tr>`;
 
   const body = rows
+    .filter(isVolumeRow)
     .map((row) => {
       const hasValue = row.computed && row.volume != null;
       const tdText = hasValue ? MAIL_TABLE_CELL.td : MAIL_TABLE_CELL.tdNa;
@@ -298,8 +365,8 @@ export function buildFteMailTableHtml(rows) {
   let fteShiftTotal = 0;
   const body = rows
     .map((row) => {
-      const fteProc = row.computed ? row.fteProcess : null;
-      const fteShift = row.computed ? row.fteShift : null;
+      const fteProc = row.fteProcess;
+      const fteShift = row.fteShift;
       if (fteProc != null) fteProcTotal += fteProc;
       if (fteShift != null) fteShiftTotal += fteShift;
       const tdText =
