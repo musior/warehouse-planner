@@ -14,7 +14,7 @@ import {
   LINE_COUNT_PROCESSES,
   PROCESS_GROUP_ORDER,
 } from "./processesOutbound.js";
-import { buildReportRows } from "./report.js";
+import { buildReportRows, isVolumeRow } from "./report.js";
 
 // ── Stan UI ───────────────────────────────────────────────────────────────────
 let _selectedSis = null;
@@ -1644,6 +1644,7 @@ export function renderReportTab({
   const rows = buildReportRows(staffing, outboundProcesses);
 
   const volRowsHtml = rows
+    .filter(isVolumeRow)
     .map((row) => {
       const rowCls = row.computed ? "" : ' class="report-row-na"';
       const hasValue = row.computed && row.volume != null;
@@ -1665,9 +1666,9 @@ export function renderReportTab({
   let fteShiftTotal = 0;
   const fteRowsHtml = rows
     .map((row) => {
-      const rowCls = row.computed ? "" : ' class="report-row-na"';
-      const fteProc = row.computed ? row.fteProcess : null;
-      const fteShift = row.computed ? row.fteShift : null;
+      const fteProc = row.fteProcess;
+      const fteShift = row.fteShift;
+      const rowCls = fteProc != null ? "" : ' class="report-row-na"';
       if (fteProc != null) fteProcTotal += fteProc;
       if (fteShift != null) fteShiftTotal += fteShift;
       return (
