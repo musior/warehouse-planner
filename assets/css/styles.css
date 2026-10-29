@@ -1663,7 +1663,7 @@ tr.report-total-row td {
   justify-content: space-between;
   padding: 6px 2px 4px;
   margin-top: 8px;
-  border-bottom: 1.5px solid var(--border-md);
+  border-bottom: 1.5px solid var(--blue);
 }
 
 .process-section-title {
@@ -1671,31 +1671,22 @@ tr.report-total-row td {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: var(--text-2);
+  color: var(--blue);
 }
 
 .process-section-total {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-1);
-  background: var(--bg);
-  border: 1px solid var(--border);
+  color: var(--blue);
+  background: var(--blue-bg);
+  border: 1px solid var(--blue);
   border-radius: var(--radius-sm);
   padding: 1px 8px;
 }
 
-/* ── Magazyn section header ───────────────────────────────────────────────── */
+/* ── Magazyn section header (tylko większy odstęp od sekcji Inbound) ───────── */
 .process-section-header--magazyn {
   margin-top: 20px;
-  border-bottom-color: var(--blue);
-}
-.process-section-header--magazyn .process-section-title {
-  color: var(--blue);
-}
-.process-section-header--magazyn .process-section-total {
-  background: var(--blue-bg);
-  border-color: var(--blue);
-  color: var(--blue);
 }
 
 /* ── Zakładka: Czasy ───────────────────────────────────────────────────────── */
