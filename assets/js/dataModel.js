@@ -292,42 +292,33 @@ function computeKpiFromData(
     awizacjeOnDate.map((a) => a.sis).filter(Boolean),
   );
 
-  const DG_DEST = "PL Dabrowa Hub";
-  const DG_SHIPPER = "3M";
-  const CROSS_EXCLUDE = new Set([DG_DEST, "SOLVENTUM FIEGE DABROWA PL 3PL DC"]);
-  const DG_DESTS = new Set([DG_DEST, "SOLVENTUM FIEGE DABROWA PL 3PL DC"]);
-
-  const bxDg = ssccInbound.filter(
+  // Klient (3M / Solventum) i podział DG / CROSS ustala parser (parsers.js):
+  // r.isDG, r.isCross, r.isSolventum. Procesy DG i CROSS liczą obu klientów
+  // razem; *SolBoxes to tylko informacja, ile z tego to Solventum.
+  const bxDgRows = ssccInbound.filter(
     (r) =>
       r.packageTypeCode === "BX" &&
-      r.customerShipTo === DG_DEST &&
-      r.shipper === DG_SHIPPER &&
+      r.isDG &&
       !r.effectiveArrival &&
       activeSisSet.has(r.sisKey),
-  ).length;
+  );
+  const bxDg = bxDgRows.length;
+  const sortingSolBoxes = bxDgRows.filter((r) => r.isSolventum).length;
   const dgKontenerCartons = kontenerRegularRows.reduce(
     (s, a) => s + a.ac + a.ac2,
     0,
   );
   const sortingDgBoxes = bxDg + dgKontenerCartons;
 
-  const bxCrossFromSscc = ssccInbound.filter(
+  const bxCrossRows = ssccInbound.filter(
     (r) =>
       r.packageTypeCode === "BX" &&
-      !CROSS_EXCLUDE.has(r.customerShipTo) &&
-      r.shipper === DG_SHIPPER &&
-      !r.effectiveArrival &&
-      activeSisSet.has(r.sisKey),
-  ).length;
-
-  const bxDgRows = ssccInbound.filter(
-    (r) =>
-      r.packageTypeCode === "BX" &&
-      DG_DESTS.has(r.customerShipTo) &&
-      r.shipper === DG_SHIPPER &&
+      r.isCross &&
       !r.effectiveArrival &&
       activeSisSet.has(r.sisKey),
   );
+  const bxCrossFromSscc = bxCrossRows.length;
+  const sortingCrossSolBoxes = bxCrossRows.filter((r) => r.isSolventum).length;
 
   const atiiMap = new Map();
   for (const r of bxDgRows) {
@@ -352,8 +343,7 @@ function computeKpiFromData(
   const pelnePaletyDgSscc = ssccInbound.filter(
     (r) =>
       r.packageTypeCode !== "BX" &&
-      DG_DESTS.has(r.customerShipTo) &&
-      r.shipper === DG_SHIPPER &&
+      r.isDG &&
       !r.effectiveArrival &&
       activeSisSet.has(r.sisKey),
   ).length;
@@ -411,12 +401,10 @@ function computeKpiFromData(
 
   const bxDgRampaRows = ssccInbound.filter(
     (r) =>
-      r.packageTypeCode === "BX" &&
-      r.customerShipTo === DG_DEST &&
-      r.shipper === DG_SHIPPER &&
-      r.effectiveArrival,
+      r.packageTypeCode === "BX" && r.isDG && r.effectiveArrival,
   );
   const bxDgRampa = bxDgRampaRows.length;
+  const sortRampaSolBoxes = bxDgRampaRows.filter((r) => r.isSolventum).length;
 
   const kontenerRozladowanyAC = awizacje
     .filter(
@@ -432,6 +420,7 @@ function computeKpiFromData(
     (r) => r.packageTypeCode === "BX" && r.isDG && !r.taskCloseDate,
   );
   const bxDgPlac = bxDgPlacRows.length;
+  const sortPlacSolBoxes = bxDgPlacRows.filter((r) => r.isSolventum).length;
   const kontenerNaPlacu = awizacje
     .filter(
       (a) =>
@@ -440,24 +429,24 @@ function computeKpiFromData(
     .reduce((s, a) => s + a.ac + a.ac2, 0);
   const sortPlacBoxes = bxDgPlac + kontenerNaPlacu;
 
+  const bxCrossRampaRows = ssccInbound.filter(
+    (r) => r.packageTypeCode === "BX" && r.isCross && r.effectiveArrival,
+  );
   const sortCrossRampaBoxes =
-    ssccInbound.filter(
-      (r) =>
-        r.packageTypeCode === "BX" &&
-        !r.isDG &&
-        r.shipper === DG_SHIPPER &&
-        r.effectiveArrival,
-    ).length + fallbackSosCrossCartonsRampa;
+    bxCrossRampaRows.length + fallbackSosCrossCartonsRampa;
 
+  const bxCrossPlacRows = ssccOutbound.filter(
+    (r) =>
+      r.packageTypeCode === "BX" &&
+      r.isCross &&
+      !r.taskCloseDate &&
+      !r.finishedScanDateTime,
+  );
   const sortCrossPlacBoxes =
-    ssccOutbound.filter(
-      (r) =>
-        r.packageTypeCode === "BX" &&
-        !r.isDG &&
-        r.shipper === DG_SHIPPER &&
-        !r.taskCloseDate &&
-        !r.finishedScanDateTime,
-    ).length + fallbackSosCrossCartonsPlac;
+    bxCrossPlacRows.length + fallbackSosCrossCartonsPlac;
+  const sortCrossMagazynSolBoxes =
+    bxCrossRampaRows.filter((r) => r.isSolventum).length +
+    bxCrossPlacRows.filter((r) => r.isSolventum).length;
 
   const kontenerSt = kontenerRegularRows.reduce((s, a) => s + a.st + a.st2, 0);
 
@@ -509,10 +498,7 @@ function computeKpiFromData(
   const pelnePaletyDgRampa =
     ssccInbound.filter(
       (r) =>
-        r.packageTypeCode !== "BX" &&
-        DG_DESTS.has(r.customerShipTo) &&
-        r.shipper === DG_SHIPPER &&
-        r.effectiveArrival,
+        r.packageTypeCode !== "BX" && r.isDG && r.effectiveArrival,
     ).length +
     fallbackWroclawDgRampa +
     fallbackSosDgPalletsRampa;
@@ -566,6 +552,11 @@ function computeKpiFromData(
     kontenerRegularPallets,
     kontenerManualCartons,
     sortingDgBoxes,
+    sortingSolBoxes, // w tym kartony Solventum (część sortingDgBoxes)
+    sortRampaSolBoxes, // w tym kartony Solventum (część sortRampaBoxes)
+    sortPlacSolBoxes, // w tym kartony Solventum (część sortPlacBoxes)
+    sortingCrossSolBoxes, // w tym kartony Solventum (część sortingCrossBoxes)
+    sortCrossMagazynSolBoxes, // w tym Solventum (część sortCrossRampa+PlacBoxes)
     sortingCrossBoxes,
     drobnicalItems,
     over01volItems,
