@@ -677,7 +677,7 @@ export function renderProcessesTab(
     '<div class="process-section-header">' +
     '<span class="process-section-title">Rozładunek</span>' +
     '<span class="process-section-total">' +
-    (unloading.peopleExact + manualContainer.peopleExact) +
+    fmtFte(unloading.peopleExact + manualContainer.peopleExact) +
     " os.</span>" +
     "</div>" +
     '<div class="process-cards">' +
@@ -714,9 +714,11 @@ export function renderProcessesTab(
     '<div class="process-section-header">' +
     '<span class="process-section-title">DG — Dąbrowa Hub</span>' +
     '<span class="process-section-total">' +
-    (sortingDg.peopleExact +
-      drobnical.peopleExact +
-      wstawianiePalet.peopleExact) +
+    fmtFte(
+      sortingDg.peopleExact +
+        drobnical.peopleExact +
+        wstawianiePalet.peopleExact,
+    ) +
     " os.</span>" +
     "</div>" +
     '<div class="process-cards">' +
@@ -728,7 +730,7 @@ export function renderProcessesTab(
       color: "green",
       tooltip: ttSimple(
         "Kartony",
-        "BX: Customer=PL Dabrowa Hub, Shipper=3M + kont. Celne=W drodze",
+        "BX: DG 3M + DG Solventum (wg Customer_Ship_To) + kont. Celne=W drodze",
         "0,3467",
         1177,
       ),
@@ -747,7 +749,7 @@ export function renderProcessesTab(
       ],
       tooltip: ttSimple(
         "Poz. ATII",
-        "Unikalne ATII (count&lt;20 i vol&lt;0.1); Customer=DG/SOLVENTUM, Shipper=3M",
+        "Unikalne ATII (count&lt;20 i vol&lt;0.1); DG 3M + DG Solventum (wg Customer_Ship_To)",
         "0,44",
         927,
       ),
@@ -807,9 +809,11 @@ export function renderProcessesTab(
     '<div class="process-section-header">' +
     '<span class="process-section-title">CROSS</span>' +
     '<span class="process-section-total">' +
-    (sortingCross.peopleExact +
-      recoCross.peopleExact +
-      foliaCross.peopleExact) +
+    fmtFte(
+      sortingCross.peopleExact +
+        recoCross.peopleExact +
+        foliaCross.peopleExact,
+    ) +
     " os.</span>" +
     "</div>" +
     (staffing.crossBoxes > 0 ? crossFlowNote : "") +
@@ -822,7 +826,7 @@ export function renderProcessesTab(
       color: "purple",
       tooltip: ttSimple(
         "Kartony",
-        "BX: Customer&ne;DG/SOLVENTUM, Shipper=3M, EffArrival puste",
+        "BX: CROSS 3M + CROSS Solventum (Customer_Ship_To spoza DG), EffArrival puste",
         "0,3724",
         1096,
       ),
@@ -904,7 +908,7 @@ export function renderProcessesTab(
     '<div class="process-section-header process-section-header--magazyn">' +
     '<span class="process-section-title">&#127979; Magazyn — DG</span>' +
     '<span class="process-section-total">' +
-    r2(
+    fmtFte(
       +sortingMagazynDg.peopleExact +
         +przygowanieMagazyn.peopleExact +
         +wstawanieMagazyn.peopleExact +
@@ -927,7 +931,7 @@ export function renderProcessesTab(
       ],
       tooltip: ttSimple(
         "Kartony",
-        "BX Inbound (EffArrival filled) + BX Outbound (isDG) + kont.",
+        "BX Inbound (EffArrival filled) + BX Outbound (Lane z cyfrą) + kont.",
         "0,3467",
         1177,
       ),
@@ -1021,7 +1025,7 @@ export function renderProcessesTab(
     '<div class="process-section-header process-section-header--magazyn">' +
     '<span class="process-section-title">&#127979; Magazyn — CROSS</span>' +
     '<span class="process-section-total">' +
-    r2(
+    fmtFte(
       +sortingCrossMagazyn.peopleExact +
         +recoCrossMagazyn.peopleExact +
         +foliaCrossMagazyn.peopleExact,
@@ -1043,7 +1047,7 @@ export function renderProcessesTab(
       ],
       tooltip: ttSimple(
         "Kartony",
-        "BX Inbound (EffArrival filled, !isDG) + BX Outbound (!isDG)",
+        "BX Inbound (EffArrival filled, CROSS) + BX Outbound (Lane bez cyfr)",
         "0,3724",
         1096,
       ),
@@ -1218,6 +1222,11 @@ function buildTransportSelectionTable(trucks, selectedSisSet) {
 
 function r2(v) {
   return Math.round(v * 100) / 100;
+}
+
+// Licznik osób w nagłówku sekcji — zawsze 2 miejsca po przecinku.
+function fmtFte(v) {
+  return r2(v || 0).toFixed(2);
 }
 
 function buildSummaryItem(label, value, highlight) {
@@ -1476,6 +1485,11 @@ function volCard(label, value, unit, sub) {
   );
 }
 
+// CROSS liczymy razem dla 3M i Solventum — w kafelku tylko informacja o podziale.
+function crossSplitUnit(total, solBoxes) {
+  return `kartonów · 3M: ${fmtNum(total - solBoxes)} / SOL: ${fmtNum(solBoxes)}`;
+}
+
 export function renderStaffingTab(staffing) {
   const wrap = document.getElementById("staffing-content");
   if (!wrap) return;
@@ -1523,26 +1537,41 @@ export function renderStaffingTab(staffing) {
     ) +
     volCard(
       "Kartony DG",
-      staffing.dgBoxes,
+      staffing.dgBoxes - staffing.solBoxes,
+      "kartonów",
+      "Inbound — do sortowania",
+    ) +
+    volCard(
+      "Kartony DG SOL",
+      staffing.solBoxes,
       "kartonów",
       "Inbound — do sortowania",
     ) +
     volCard(
       "Kartony CROSS",
       staffing.crossBoxes,
-      "kartonów",
+      crossSplitUnit(staffing.crossBoxes, staffing.crossSolBoxes),
       "Inbound — do sortowania",
     ) +
     volCard(
       "Kartony DG",
-      staffing.sortMagazynDgBoxes,
+      staffing.sortMagazynDgBoxes - staffing.sortMagazynSolBoxes,
+      "kartonów",
+      "Magazyn — rampa + plac",
+    ) +
+    volCard(
+      "Kartony DG SOL",
+      staffing.sortMagazynSolBoxes,
       "kartonów",
       "Magazyn — rampa + plac",
     ) +
     volCard(
       "Kartony CROSS",
       staffing.sortCrossMagazynBoxes,
-      "kartonów",
+      crossSplitUnit(
+        staffing.sortCrossMagazynBoxes,
+        staffing.sortCrossMagazynSolBoxes,
+      ),
       "Magazyn — rampa + plac",
     ) +
     "</div>";
@@ -1872,7 +1901,7 @@ export function renderOutboundProcessesTab(results) {
         esc(group) +
         "</span>" +
         '<span class="process-section-total">' +
-        groupTotal +
+        fmtFte(groupTotal) +
         " os.</span>" +
         "</div>" +
         '<div class="process-cards">' +
