@@ -134,7 +134,7 @@ export function parseSSCCCsv(buffer, filename = null) {
  *
  * Kluczowe dla procesów:
  *   Lane              → kod ścieżki sortowania (np. "20KP", "PLP", "CDCZ")
- *                       Lane Typ "DG" w DAX = Customer_Ship_To = "PL Dabrowa Hub"
+ *                       z cyfrą = DG, bez cyfr = CROSS
  *   TaskCloseDate     → wypełniony gdy pozycja zamknięta (zakończona)
  *   TruckIdentification → SIS — klucz łączący z awizacjami (jak w Inbound)
  *   EffectiveArrival  → data przybycia (w Outbound jest WYPEŁNIONY — auto już na miejscu)
@@ -142,6 +142,31 @@ export function parseSSCCCsv(buffer, filename = null) {
 export function parseSSCCOutboundCsv(buffer, filename = null) {
   return _parseSSCCBase(buffer, { isOutbound: true, filename });
 }
+
+// ── Klient i podział DG / CROSS ──────────────────────────────────────────────
+// Klient = kolumna Shipper. DG/CROSS:
+//   SSCC Inbound  (jadące + rampa) → Customer_Ship_To z listy DG danego klienta
+//   SSCC Outbound (plac)           → Lane z cyfrą = DG (np. 01K, 20KP),
+//                                    Lane bez cyfr = CROSS (np. PLP, CDCZ)
+// Wszystkie porównania tekstu: bez względu na wielkość liter i spacje.
+const CLIENT_3M = "3M";
+const CLIENT_SOLVENTUM = "Solventum";
+
+const normalizeText = (s) =>
+  (s || "").replace(/\s+/g, " ").trim().toUpperCase();
+
+const CLIENT_BY_SHIPPER = new Map([
+  ["3M", CLIENT_3M],
+  ["SOLVENTUM IRELAND LIMITED", CLIENT_SOLVENTUM],
+]);
+
+const DG_SHIP_TO_BY_CLIENT = {
+  [CLIENT_3M]: new Set(["PL DABROWA HUB", "MAIN MATERIALS DABROWA GORNICZA"]),
+  [CLIENT_SOLVENTUM]: new Set([
+    "FIEGE DABROWA PL 3PL DC",
+    "SOLVENTUM FIEGE DABROWA PL 3PL DC",
+  ]),
+};
 
 /**
  * Wspólna logika parsowania dla Inbound i Outbound.
@@ -243,11 +268,22 @@ function _parseSSCCBase(buffer, options = {}) {
     // SIS klucz — identyczny mechanizm jak Inbound
     row.sisKey = row.truckIdentification || row.effectiveArrival;
 
-    // Flaga DG: odpowiednik "Lane Typ = DG" z Power BI
-    // (w naszym pliku: Customer_Ship_To = "PL Dabrowa Hub")
-    row.isDG =
-      row.customerShipTo === "PL Dabrowa Hub" ||
-      row.customerShipTo === "SOLVENTUM FIEGE DABROWA PL 3PL DC";
+    // Klient (3M / Solventum) z kolumny Shipper; null = nieznany shipper,
+    // wiersz nie trafia ani do DG, ani do CROSS.
+    row.client = CLIENT_BY_SHIPPER.get(normalizeText(row.shipper)) || null;
+    row.isSolventum = row.client === CLIENT_SOLVENTUM;
+
+    // Flaga DG (odpowiednik "Lane Typ = DG" z Power BI) i CROSS
+    if (!row.client) {
+      row.isDG = false;
+    } else if (isOutbound) {
+      row.isDG = /\d/.test(row.lane || "");
+    } else {
+      row.isDG = DG_SHIP_TO_BY_CLIENT[row.client].has(
+        normalizeText(row.customerShipTo),
+      );
+    }
+    row.isCross = !!row.client && !row.isDG;
 
     rows.push(row);
   }

@@ -39,7 +39,7 @@ export const PROCESSES = {
     minutesPerUnit: 0.3467,   // min/karton
     productivity:   0.85,
     // ~1177 kart./os./zmianę
-    // Filtr BX: Customer_Ship_To="PL Dabrowa Hub", Shipper="3M", EffectiveArrival blank
+    // Filtr BX: isDG (3M + Solventum, wg Customer_Ship_To), EffectiveArrival blank
     // + kartony z awizacji: SOS=KONTENER (nie manual), Celne=W drodze
   },
   sortingCross: {
@@ -48,8 +48,8 @@ export const PROCESSES = {
     minutesPerUnit: 0.3724,   // min/karton
     productivity:   0.85,
     // ~1096 kart./os./zmianę
-    // Filtr BX: Customer_Ship_To NOT IN {"PL Dabrowa Hub","SOLVENTUM FIEGE DABROWA PL 3PL DC"},
-    //           Shipper="3M", EffectiveArrival blank
+    // Filtr BX: isCross (3M + Solventum, Customer_Ship_To spoza DG),
+    //           EffectiveArrival blank
   },
   recoCross: {
     id:             'recoCross',
@@ -79,7 +79,7 @@ export const PROCESSES = {
     productivity:   0.85,
     // ~927 ATII/os/zmianę
     // Wejście: liczba unikalnych ATII gdzie rows < 20 AND volume < 0.1
-    // Filtr: Customer_Ship_To IN {DG, SOLVENTUM}, Shipper=3M, EffectiveArrival blank
+    // Filtr: isDG (3M + Solventum), EffectiveArrival blank
   },
   wstawianiePaletDg: {
     id:             'wstawianiePaletDg',
@@ -119,7 +119,7 @@ export const PROCESSES = {
   sortingCrossRampa: {
     id: 'sortingCrossRampa', label: 'Sortowanie CROSS — bufor',
     minutesPerUnit: 0.3724, productivity: 0.85, shiftMinutes: SHIFT_MINUTES,
-    // ~1096 kart/os/zmianę | Inbound, EffectiveArrival filled, !isDG, Shipper=3M
+    // ~1096 kart/os/zmianę | Inbound, EffectiveArrival filled, isCross
   },
   sortingCrossPlac: {
     id: 'sortingCrossPlac', label: 'Sortowanie CROSS — plac',
@@ -439,7 +439,7 @@ export function calcWstawianieDrobnicyRampa(drobnicalItemsRampa, kontenerRozlado
 
 /**
  * Wstawianie drobnicy DG — plac.
- * Źródło: ATII z Outbound (isDG, TaskCloseDate blank), count<20, vol<0.1
+ * Źródło: ATII z Outbound (isDG = Lane z cyfrą, TaskCloseDate blank), count<20, vol<0.1
  * Brak składnika kontenerowego (DAX nie ma go w wzorze dla placu).
  */
 export function calcWstawianieDrobnicyPlac(drobnicalItemsPlac) {
@@ -458,7 +458,7 @@ export function calcWstawianieDrobnicyPlac(drobnicalItemsPlac) {
 }
 
 /**
- * Rekonstrukcja CROSS — bufor (Inbound, EffectiveArrival filled, !isDG).
+ * Rekonstrukcja CROSS — bufor (Inbound, EffectiveArrival filled, isCross).
  * Wejście: bxCrossRampa / 10 = palety po rekonstrukcji
  */
 export function calcRecoCrossRampa(bxCrossRampa, fullPallets = 0) {
@@ -489,7 +489,7 @@ export function calcRecoCrossRampa(bxCrossRampa, fullPallets = 0) {
 }
 
 /**
- * Rekonstrukcja CROSS — plac (Outbound, !isDG, TaskCloseDate blank).
+ * Rekonstrukcja CROSS — plac (Outbound, isCross = Lane bez cyfr, TaskCloseDate blank).
  * Wejście: bxCrossPlac / 10 = palety po rekonstrukcji
  * Uwaga: DAX nie ma filtra FinishedScanDateTime dla reko plac (tylko dla sortowania).
  */
@@ -647,20 +647,24 @@ export function calcAllProcesses(kpi, ssccOutbound = []) {
   return {
     unloadingPallets:  kpi.totalPalletsToUnload || 0,
     manualCartons:     kpi.kontenerManualCartons || 0,
-    dgBoxes:           kpi.sortingDgBoxes        || 0,
+    dgBoxes:           kpi.sortingDgBoxes        || 0, // DG + Solventum
+    solBoxes:          kpi.sortingSolBoxes       || 0,
     dgDrobnicalItems:  kpi.drobnicalItems        || 0,
     dgPaletyZ20K:      paletyZ20K,
     dgPelnePalety:     pelnePaletyDg,
     dgKontenerSt:      kontenerSt,
-    crossBoxes:        bxCross,
+    crossBoxes:        bxCross, // 3M + Solventum
+    crossSolBoxes:     kpi.sortingCrossSolBoxes  || 0,
     crossPalletsReko:  r(bxCross / 10,        1),
     crossPalletsFolia: r(bxCross / 10 * 0.75, 1),
     sortRampaBoxes:        kpi.sortRampaBoxes        || 0,
     sortPlacBoxes:         kpi.sortPlacBoxes         || 0,
     sortCrossRampaBoxes:   kpi.sortCrossRampaBoxes   || 0,
     sortCrossPlacBoxes:    kpi.sortCrossPlacBoxes    || 0,
-    sortMagazynDgBoxes:    (kpi.sortRampaBoxes      || 0) + (kpi.sortPlacBoxes      || 0),
-    sortCrossMagazynBoxes: (kpi.sortCrossRampaBoxes || 0) + (kpi.sortCrossPlacBoxes || 0),
+    sortMagazynDgBoxes:    (kpi.sortRampaBoxes      || 0) + (kpi.sortPlacBoxes      || 0), // DG + Solventum
+    sortMagazynSolBoxes:   (kpi.sortRampaSolBoxes   || 0) + (kpi.sortPlacSolBoxes   || 0),
+    sortCrossMagazynBoxes: (kpi.sortCrossRampaBoxes || 0) + (kpi.sortCrossPlacBoxes || 0), // 3M + Solventum
+    sortCrossMagazynSolBoxes: kpi.sortCrossMagazynSolBoxes || 0,
     przygowanieRampa, przygowaniePlac,
     wstawanieRampa, wstawaniePlac,
     drobnicaRampa, drobnicaPlac,
