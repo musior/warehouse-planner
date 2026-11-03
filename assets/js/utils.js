@@ -21,10 +21,13 @@ export function parseExcelDate(value) {
   // Serial liczbowy Excela (np. 46121)
   const serial = Number(str);
   if (!isNaN(serial) && serial > 40000 && serial < 60000) {
-    // Baza Excela: 1 = 1900-01-01, ale Excel błędnie liczy rok 1900 jako przestępny
-    const excelBase = new Date(1899, 11, 30);
-    const date = new Date(excelBase.getTime() + serial * 86400000);
-    return date;
+    // Baza Excela: 1 = 1900-01-01, ale Excel błędnie liczy rok 1900 jako przestępny.
+    // Liczymy w UTC, a potem budujemy lokalną północ z dnia/miesiąca/roku.
+    // Lokalna baza (new Date(1899, 11, 30)) przesuwała datę o dzień w czasie
+    // zimowym — strefa Europe/Warsaw w 1899 miała przesunięcie +01:24 (LMT),
+    // więc wynik wypadał o 23:36 dnia poprzedniego.
+    const utc = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000);
+    return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
   }
 
   return null;
